@@ -1,7 +1,7 @@
 """應用程式入口：建立 Flask app、載入設定、掛上各個模組（對應講義第 2 章）。
 
 啟動方式（擇一）：
-    uv run flask run        # 讀 .flaskenv 的 FLASK_RUN_PORT=5269、FLASK_DEBUG=1
+    uv run flask run        # 讀 .flaskenv 的 FLASK_RUN_PORT=8000、FLASK_DEBUG=1
     uv run app.py           # 跑最底下的 app.run()
 
 第一次啟動前先把 .env.example 複製成 .env 並填入 JWT_KEY（見 README）。
@@ -56,7 +56,7 @@ if len(app.config["JWT_KEY"].encode()) < 32:
 # ════════════════════════════════════════════════════════════
 
 # CORS（跨來源資源共用，6-5）：瀏覽器的同源政策會擋住不同 port 的請求，
-# 例如前端在 :5500、後端在 :5269，需要明確允許才能通。只開放 /api/ 底下的路徑；
+# 例如前端在 :5500、後端在 :8000，需要明確允許才能通。只開放 /api/ 底下的路徑；
 # always_send=False：同源請求（沒有 Origin 標頭）就不加 CORS 標頭，DevTools 看起來才乾淨。
 CORS(app, always_send=False, resources={r"/api/*": {"origins": [
     "http://localhost:5500",      # VS Code Live Server
@@ -89,4 +89,4 @@ def swagger():
 
 if __name__ == "__main__":
     # 直接執行 python app.py 時用這裡的設定；flask run 則讀 .flaskenv
-    app.run(port=5269, debug=True)
+    app.run(port=8000, debug=True)

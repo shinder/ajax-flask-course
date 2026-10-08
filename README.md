@@ -47,7 +47,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 uv run flask run
 ```
 
-第一次執行 uv 會自動建立 `.venv` 並安裝依賴，之後直接啟動。`.flaskenv` 已設定 port 5269 與 debug 模式，改檔會自動重啟。
+第一次執行 uv 會自動建立 `.venv` 並安裝依賴，之後直接啟動。`.flaskenv` 已設定 port 8000 與 debug 模式，改檔會自動重啟。
 
 專案根目錄也提供了啟動腳本，效果和上面的指令相同：
 
@@ -73,14 +73,14 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 | 頁面 | 網址 | 對應講義 |
 | ---- | ---- | -------- |
-| 待辦清單（Todo App） | <http://localhost:5269/> | 6-6 |
-| 水果清單：搜尋、排序、分頁、編輯、欄位驗證 | <http://localhost:5269/fruits.html> | 5-5 至 5-10、6-3、8-4 |
-| 商品管理（SQLite 版） | <http://localhost:5269/products.html> | 5-7、7-4 |
-| 檔案上傳：fetch + FormData 與 XHR 進度條 | <http://localhost:5269/upload.html> | 6-1 |
-| 同步 vs 非同步 XHR | <http://localhost:5269/sync-demo.html> | 4-3 |
-| SSE 伺服器推送 | <http://localhost:5269/sse-demo.html> | 6-2 |
-| JWT 登入、註冊、查看 token | <http://localhost:5269/login.html> | 第 9 章 |
-| Swagger API 文件 | <http://localhost:5269/swagger> | 2-5 |
+| 待辦清單（Todo App） | <http://localhost:8000/> | 6-6 |
+| 水果清單：搜尋、排序、分頁、編輯、欄位驗證 | <http://localhost:8000/fruits.html> | 5-5 至 5-10、6-3、8-4 |
+| 商品管理（SQLite 版） | <http://localhost:8000/products.html> | 5-7、7-4 |
+| 檔案上傳：fetch + FormData 與 XHR 進度條 | <http://localhost:8000/upload.html> | 6-1 |
+| 同步 vs 非同步 XHR | <http://localhost:8000/sync-demo.html> | 4-3 |
+| SSE 伺服器推送 | <http://localhost:8000/sse-demo.html> | 6-2 |
+| JWT 登入、註冊、查看 token | <http://localhost:8000/login.html> | 第 9 章 |
+| Swagger API 文件 | <http://localhost:8000/swagger> | 2-5 |
 
 `static/` 底下 `010` 到 `270` 的編號檔案是課堂示範用的最小範例，每個只聚焦一件事，對應章節與觀察重點見講義附錄 E。其中 `270-cors.html` 要用 VS Code Live Server 從 5500 埠開才看得到 CORS 錯誤；`020`、`170`、`180`、`190` 寫的是完整網址，也能從 Live Server 開。
 
@@ -106,8 +106,8 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 **瀏覽器**
 
-1. 開 <http://localhost:5269/>，未登入時會看到提示、表單被隱藏。
-2. 到 <http://localhost:5269/login.html> 註冊（例如 `alice` / `secret123`），再登入。頁面會顯示目前帳號、token 原文與解碼後的 Payload。
+1. 開 <http://localhost:8000/>，未登入時會看到提示、表單被隱藏。
+2. 到 <http://localhost:8000/login.html> 註冊（例如 `alice` / `secret123`），再登入。頁面會顯示目前帳號、token 原文與解碼後的 Payload。
 3. 回待辦清單頁，可以新增、勾選、刪除。
 4. 錯誤情境：帳號填 `a` 會在欄位旁顯示驗證訊息；密碼打錯回「帳號或密碼錯誤」；重複註冊回「帳號已被使用」。
 5. 按「登出」後回待辦頁，會變回未登入提示。
@@ -181,7 +181,7 @@ ajax-flask-course/
 │   │   └── utils.js        # escapeHtml、debounce（5-5、5-9）
 │   └── css/style.css
 ├── api.http                # 所有端點的測試請求（REST Client）
-├── .flaskenv               # flask run 的設定：port 5269、debug（可進 git）
+├── .flaskenv               # flask run 的設定：port 8000、debug（可進 git）
 ├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY（.env 不進 git）
 ├── .python-version         # 3.14，uv 依此選用 Python
 ├── pyproject.toml          # 專案與依賴定義
@@ -210,7 +210,7 @@ ajax-flask-course/
 ```bash
 # 1. 安裝 Python 3.14 並初始化專案（--no-package：平面配置，不產生 src/ 與打包設定）
 uv python install 3.14
-uv init --app --no-package --python 3.14
+uv init --no-package --python 3.14
 
 # 2. 加入依賴
 uv add flask pydantic pyjwt flask-cors python-dotenv
@@ -228,7 +228,7 @@ uv run flask run
 
 ## API 端點
 
-測試端點前要先把伺服器跑起來，所有路徑的主機都是 <http://localhost:5269>。要逐一送出請求，用 VS Code REST Client 開 `api.http`，或開 <http://localhost:5269/swagger>。表格最後一欄是講義的對應章節。
+測試端點前要先把伺服器跑起來，所有路徑的主機都是 <http://localhost:8000>。要逐一送出請求，用 VS Code REST Client 開 `api.http`，或開 <http://localhost:8000/swagger>。表格最後一欄是講義的對應章節。
 
 錯誤回應一律是 Problem Details 風格的 JSON：`{ "title": "...", "status": 404 }`，驗證錯誤多一個 `errors` 物件，key 是欄位名、value 是訊息陣列。
 

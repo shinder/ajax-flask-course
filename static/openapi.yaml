@@ -6,7 +6,7 @@ info:
   version: "1.0"
   description: 課程講義《AJAX + RESTful API 使用 Flask》的範例 API
 servers:
-  - url: http://localhost:5269
+  - url: http://localhost:8000
 
 # 全域套用 Bearer：所有端點都顯示鎖頭。沒加 @login_required 的端點不帶 token 一樣能呼叫。
 security:

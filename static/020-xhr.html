@@ -13,7 +13,7 @@
       // 1. 建立 XHR 物件
       const xhr = new XMLHttpRequest();
       // 2. 設定：方法與網址（這裡寫完整網址；同源時寫 /api/fruits 也可以，見 030）
-      xhr.open("GET", "http://localhost:5269/api/fruits");
+      xhr.open("GET", "http://localhost:8000/api/fruits");
 
       // 3. 註冊事件處理器：回應完成時觸發 onload，responseText 是「字串」
       xhr.onload = function () {

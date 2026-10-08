@@ -18,7 +18,7 @@
       // 要當成錯誤處理，必須自己檢查 r.ok 或 r.status
       async function myTest() {
         try {
-          const r = await fetch(`http://localhost:5269/api/aaa`);
+          const r = await fetch(`http://localhost:8000/api/aaa`);
           const result = await r.text(); // 404 的 body 不一定是 JSON，用 text() 比較保險
           console.log({ result });
           my.innerHTML = result;

@@ -17,7 +17,7 @@
       // 若拿掉 await，100 個請求會同時送出，順序就不保證了
       async function myTest() {
         for (let i = 0; i < 100; i++) {
-          const r = await fetch(`http://localhost:5269/api/fruits`, {
+          const r = await fetch(`http://localhost:8000/api/fruits`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -1,7 +1,7 @@
 # 用 VS Code 的 REST Client 擴充套件開啟，每個請求上方會出現 Send Request，點擊即可送出（講義 1-6）。
 # 請求之間用 ### 分隔。先啟動伺服器：uv run flask run（或 ./start.sh、.\start.bat）。
 
-@baseUrl = http://localhost:5269
+@baseUrl = http://localhost:8000
 
 ### ───────── 第 3 章：Basics ─────────
 

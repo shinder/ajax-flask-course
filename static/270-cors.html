@@ -14,10 +14,10 @@
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     ></script>
     <script>
-      // 這頁要用 VS Code Live Server（http://127.0.0.1:5500）開，不要從 :5269 開。
+      // 這頁要用 VS Code Live Server（http://127.0.0.1:5500）開，不要從 :8000 開。
       // 來源（協定 + 主機 + port）不同就是跨來源，瀏覽器會檢查回應有沒有 Access-Control-Allow-Origin；
       // 後端 app.py 的 CORS 設定若沒允許這個來源，fetch 會 reject 並在 Console 出現 CORS 錯誤
-      fetch("http://localhost:5269/api/fruits")
+      fetch("http://localhost:8000/api/fruits")
         .then((r) => r.json())
         .then((r) => console.log(r));
     </script>
