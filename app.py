@@ -12,7 +12,8 @@ import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, send_from_directory
+from flask import Flask
+from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 
 import db
@@ -35,12 +36,16 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 # ════════════════════════════════════════════════════════════
 app.config.update(
     DATABASE=str(BASE_DIR / "app.db"),
+    UPLOAD_DIR=str(BASE_DIR / "static" / "uploads"),   # 6-1 上傳檔案的存放位置，放在 static 底下讓瀏覽器能直接開
     MAX_CONTENT_LENGTH=2 * 1024 * 1024,    # 整個請求最多 2 MB，超過時 Flask 回 413（6-1 檔案上傳）
     JWT_ISSUER="FlaskAjaxApi",              # 簽發者，通常填 API 的名稱或網址
     JWT_AUDIENCE="FlaskAjaxApiClient",      # 接收者，通常填前端的名稱或網址
     JWT_EXPIRE_MINUTES=int(os.environ.get("JWT_EXPIRE_MINUTES", "60")),
     JWT_KEY=os.environ.get("JWT_KEY", ""),  # 簽章用的對稱金鑰，放 .env 不進 git
 )
+# JSON 輸出設定。app.json 的型別標註是抽象的 JSONProvider，上面沒有這兩個屬性；
+# 明確換成 Flask 內建的 DefaultJSONProvider，型別檢查器才認得
+app.json = DefaultJSONProvider(app)
 app.json.ensure_ascii = False   # JSON 裡的中文直接輸出，不轉成 \uXXXX
 app.json.sort_keys = False      # 維持 dict 原本的欄位順序，方便教學時對照（Flask 預設會依字母排序）
 
@@ -79,13 +84,13 @@ app.register_blueprint(auth.bp)            # JWT  /api/auth/*                  9
 # 根路徑導向首頁：/ → static/index.html（等同 .NET 的 UseDefaultFiles）
 @app.get("/")
 def index():
-    return send_from_directory(app.static_folder, "index.html")
+    return app.send_static_file("index.html")
 
 
 # API 文件（2-5）：Swagger UI 讀 static/openapi.yaml。規格是手寫的，不像 ASP.NET Core 會自動產生
 @app.get("/swagger")
 def swagger():
-    return send_from_directory(app.static_folder, "swagger.html")
+    return app.send_static_file("swagger.html")
 
 
 if __name__ == "__main__":

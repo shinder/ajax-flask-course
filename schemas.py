@@ -10,6 +10,7 @@ CamelModel 用 alias_generator 自動對應，前端送 imageUrl、後端寫 dto
 """
 
 from datetime import datetime
+from typing import LiteralString
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
@@ -30,8 +31,9 @@ class CamelModel(BaseModel):
         return self.model_dump(by_alias=True, mode="json")
 
 
-def _require(value: str, message: str) -> str:
-    """共用的「不可為空」檢查。PydanticCustomError 的第二個參數就是回給前端的訊息。"""
+def _require(value: str, message: LiteralString) -> str:
+    """共用的「不可為空」檢查。PydanticCustomError 的第二個參數就是回給前端的訊息，
+    它要求是字面字串（LiteralString），不能是執行期組出來的字串。"""
     if not value:
         raise PydanticCustomError("required", message)
     return value

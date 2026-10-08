@@ -50,7 +50,8 @@ def create_product():
         (dto.name, dto.price, dto.image_url, utc_now_iso()),
     )
     db.commit()                       # sqlite3 預設開啟交易，要 commit 才會真的寫入
-    product_id = cursor.lastrowid     # 自動產生的主鍵
+    product_id = cursor.lastrowid     # 自動產生的主鍵。型別是 int | None，INSERT 之後一定有值
+    assert product_id is not None
     product = _row_to_product(_fetch(product_id))
     return product, 201, {"Location": url_for("products.get_product", product_id=product_id)}
 

@@ -159,7 +159,7 @@ def upload_fruit_image():
     note = request.form.get("note", "")
     errors: dict[str, list[str]] = {}
 
-    if file is None or file.filename == "":
+    if file is None or not file.filename:   # 沒有 file 欄位，或有欄位但沒選檔案
         errors["file"] = ["沒有收到檔案"]
         raise ProblemError(400, "輸入資料有誤", errors)
 
@@ -175,8 +175,8 @@ def upload_fruit_image():
     if errors:
         raise ProblemError(400, "輸入資料有誤", errors)
 
-    # 藍圖裡拿不到 app 變數，要用 current_app 取得「目前正在處理請求的 app」
-    upload_dir = Path(current_app.static_folder) / "uploads"
+    # 藍圖裡拿不到 app 變數，要用 current_app 取得「目前正在處理請求的 app」再讀設定
+    upload_dir = Path(current_app.config["UPLOAD_DIR"])
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     # 隨機檔名 + 白名單裡的副檔名，避免覆蓋、路徑穿越與奇怪的大小寫

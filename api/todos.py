@@ -48,7 +48,9 @@ def create_todo():
     db = get_db()
     cursor = db.execute("INSERT INTO todos (title) VALUES (?)", (dto.title,))   # is_done 用資料表預設值 0
     db.commit()
-    todo = _row_to_todo(_fetch(cursor.lastrowid))
+    new_id = cursor.lastrowid         # 型別是 int | None，INSERT 之後一定有值
+    assert new_id is not None
+    todo = _row_to_todo(_fetch(new_id))
     return todo, 201, {"Location": url_for("todos.get_todo", todo_id=todo["id"])}
 
 
