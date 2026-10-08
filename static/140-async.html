@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>140 async IIFE 與完成通知</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">Run</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      function myPromise(n = "a") {
+        return new Promise((resolve, reject) => {
+          const ms = 100 + Math.random() * 500;
+          setTimeout(() => {
+            resolve({ n, ms });
+          }, ms);
+        });
+      }
+
+      // 用「立即執行的 async 箭頭函式」（IIFE）包住 await 迴圈，一般函式裡就能用 await。
+      // async 函式本身回傳 Promise，所以可以在後面接 .then 得知整個迴圈做完了
+      function myTest() {
+        (async () => {
+          for (let i = 0; i < 10; i++) {
+            console.log(await myPromise("a" + i));
+          }
+        })().then((r) => console.log("a 做完了"));
+      }
+    </script>
+  </body>
+</html>

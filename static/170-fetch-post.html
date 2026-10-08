@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>170 fetch POST JSON 新增資料</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">新增資料</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      // 用 fetch 送 POST，三個要素缺一不可：
+      //   1. method: "POST"
+      //   2. headers 的 Content-Type 告訴後端 body 是 JSON，Flask 的 request.get_json() 才會解析
+      //   3. body 必須是字串，所以物件要先 JSON.stringify
+      async function myTest() {
+        const payload = {
+          name: "水果一",
+          price: 30,
+        };
+
+        const r = await fetch(`http://localhost:5269/api/fruits`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const result = await r.json(); // 後端回 201 + 新增後的物件（含產生的 id）
+
+        console.log(result);
+      }
+    </script>
+  </body>
+</html>

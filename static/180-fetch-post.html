@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>180 fetch POST 迴圈新增 100 筆</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">新增資料</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      // 迴圈裡 await：一筆送完、拿到回應後才送下一筆，共 100 次。
+      // 若拿掉 await，100 個請求會同時送出，順序就不保證了
+      async function myTest() {
+        for (let i = 0; i < 100; i++) {
+          const r = await fetch(`http://localhost:5269/api/fruits`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: `水果${i}`,
+              price: 30,
+            }),
+          });
+          const result = await r.json();
+          console.log(result);
+        }
+      }
+    </script>
+  </body>
+</html>

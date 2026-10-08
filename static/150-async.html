@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>150 兩個 async 迴圈同時進行</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">Run</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      function myPromise(n = "a") {
+        return new Promise((resolve, reject) => {
+          const ms = 100 + Math.random() * 500;
+          setTimeout(() => {
+            resolve({ n, ms });
+          }, ms);
+        });
+      }
+
+      // 兩個 async IIFE 各自依序跑，但彼此不等對方：a 迴圈與 b 迴圈交錯印出，
+      // 總時間約等於較慢的那一個，而不是兩者相加
+      function myTest() {
+        (async () => {
+          for (let i = 0; i < 10; i++) {
+            console.log(await myPromise("a" + i));
+          }
+        })().then((r) => console.log("a 做完了"));
+
+        (async () => {
+          for (let i = 0; i < 10; i++) {
+            console.log(await myPromise("b" + i));
+          }
+        })().then((r) => console.log("b 做完了"));
+      }
+    </script>
+  </body>
+</html>

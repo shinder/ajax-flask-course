@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>待辦清單 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>待辦清單</h1>
+
+    <!-- /api/todos 加了 @login_required，沒登入就看不到也不能新增；這裡把狀態講清楚，不要只留一個空清單 -->
+    <section id="authHint" hidden>
+        <p class="hint">待辦清單需要登入才能使用，請先到 <a href="/login.html">登入頁</a> 註冊並登入。</p>
+    </section>
+    <section id="authBar" hidden style="display:flex;align-items:center;gap:1rem">
+        <span class="hint" id="whoami" style="flex:1"></span>
+        <button id="btnLogout" class="btn-secondary">登出</button>
+    </section>
+
+    <form id="addForm">
+        <input type="text" name="title" placeholder="新增待辦事項" required />
+        <button type="submit" class="btn-primary">新增</button>
+    </form>
+    <ul id="todoList"></ul>
+</main>
+<script type="module">
+import { api } from '/js/api.js';
+import { showToast } from '/js/toast.js';
+import { escapeHtml } from '/js/utils.js';
+
+const authHint = document.getElementById('authHint');
+const authBar = document.getElementById('authBar');
+const addForm = document.getElementById('addForm');
+
+// 沒有 token 或 token 失效（401）時，隱藏操作介面、顯示登入提示。
+// api.js 收到 401 已經把 token 清掉，這裡只負責畫面。
+function showLoggedOut() {
+    authHint.hidden = false;
+    authBar.hidden = true;
+    addForm.hidden = true;
+    document.getElementById('todoList').innerHTML = '';
+}
+
+// 統一處理 API 錯誤：401 代表登入狀態失效，其餘照常顯示 Toast
+function handleError(err, fallback) {
+    if (err.status === 401) {
+        showToast('登入已過期，請重新登入', 'error');
+        showLoggedOut();
+        return;
+    }
+    showToast(fallback ?? err.message, 'error');
+}
+
+async function loadTodos() {
+    const todos = await api.get('/api/todos');
+    const list = document.getElementById('todoList');
+    list.innerHTML = todos.map(t => `
+        <li class="${t.isDone ? 'done' : ''}" data-id="${t.id}">
+            <input type="checkbox" ${t.isDone ? 'checked' : ''} />
+            <span>${escapeHtml(t.title)}</span>
+            <button class="btn-danger btn-delete">✕</button>
+        </li>
+    `).join('');
+}
+
+document.getElementById('addForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const title = e.target.title.value.trim();
+    if (!title) return;
+    try {
+        await api.post('/api/todos', { title });
+        e.target.reset();
+        await loadTodos();
+    } catch (err) {
+        handleError(err);
+    }
+});
+
+document.getElementById('todoList').addEventListener('change', async e => {
+    if (e.target.type !== 'checkbox') return;
+    const id = Number(e.target.closest('li').dataset.id);
+    try {
+        await api.patch(`/api/todos/${id}`, { isDone: e.target.checked });
+        await loadTodos();
+    } catch (err) {
+        handleError(err);
+    }
+});
+
+document.getElementById('todoList').addEventListener('click', async e => {
+    if (!e.target.classList.contains('btn-delete')) return;
+    const li = e.target.closest('li');
+    const id = Number(li.dataset.id);
+
+    // Optimistic UI
+    li.remove();
+    try {
+        await api.delete(`/api/todos/${id}`);
+    } catch (err) {
+        if (err.status !== 401) await loadTodos();
+        handleError(err, '刪除失敗');
+    }
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('token');   // JWT 無狀態，前端丟掉 token 就是登出
+    showToast('已登出', 'info');
+    showLoggedOut();
+});
+
+// 進入頁面：先確認登入狀態，再載入清單。
+// 直接呼叫 /api/todos 也能達到同樣效果（沒登入會 401），但先問 /me 可以把帳號顯示出來。
+async function init() {
+    if (!localStorage.getItem('token')) {
+        showLoggedOut();
+        return;
+    }
+    try {
+        const me = await api.get('/api/auth/me');
+        document.getElementById('whoami').textContent = `目前登入：${me.username}`;
+        authBar.hidden = false;
+        await loadTodos();
+    } catch (err) {
+        // 首次載入失敗（例如後端沒啟動）要讓使用者知道，不能只留在 Console
+        handleError(err, `載入失敗：${err.message}`);
+    }
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>檔案上傳 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        form { margin-bottom: .75rem; align-items: center; }
+        progress { width: 100%; height: 1rem; margin-top: .5rem; }
+        .result { font-size: .9rem; color: #6b7280; margin-top: .5rem; word-break: break-all; }
+        .result img { display: block; max-width: 240px; margin-top: .5rem; border-radius: .375rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>檔案上傳</h1>
+    <!-- 對應講義 6-1：兩種寫法都打同一個後端端點 POST /api/fruits/upload -->
+
+    <section>
+        <h2>寫法一：fetch + FormData</h2>
+        <form id="fetch-form">
+            <input type="file" name="file" required />
+            <button type="submit" class="btn-primary">上傳</button>
+        </form>
+        <div class="result" id="fetch-result"></div>
+    </section>
+
+    <section>
+        <h2>寫法二：XHR + 上傳進度條</h2>
+        <form id="xhr-form">
+            <input type="file" name="file" required />
+            <button type="submit" class="btn-primary">上傳</button>
+        </form>
+        <progress id="upload-bar" value="0" max="100"></progress>
+        <span id="upload-text">0%</span>
+        <div class="result" id="xhr-result"></div>
+    </section>
+</main>
+<script type="module">
+import { showToast } from '/js/toast.js';
+import { escapeHtml } from '/js/utils.js';
+
+// 這一頁不用 api.js：它固定送 Content-Type: application/json，FormData 上傳不能用
+const UPLOAD_URL = '/api/fruits/upload';
+
+// 後端驗證失敗會回 400 + ValidationProblemDetails，把 errors 的訊息串起來給使用者看
+async function readError(res) {
+    const body = await res.json().catch(() => ({}));
+    const messages = body.errors ? Object.values(body.errors).flat() : [];
+    return messages.length ? messages.join('、') : (body.title ?? `HTTP ${res.status}`);
+}
+
+// 回傳結果顯示：顯示網址與大小，若是圖片就直接秀出來
+function showResult(el, result) {
+    const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(result.url);
+    const url = escapeHtml(result.url);   // 回來的資料一律先跳脫再放進 innerHTML
+    el.innerHTML = `
+        已儲存：<a href="${url}" target="_blank">${url}</a>（${result.size} bytes，備註：${escapeHtml(result.note)}）
+        ${isImage ? `<img src="${url}" alt="" />` : ''}
+    `;
+}
+
+// ── 寫法一：fetch + FormData ─────────────────────────────
+document.getElementById('fetch-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    const resultEl = document.getElementById('fetch-result');
+
+    const formData = new FormData();
+    formData.append('file', e.target.file.files[0]);
+    formData.append('note', '水果圖片');
+
+    btn.disabled = true;
+    try {
+        // 注意：使用 FormData 時「不要」自己設 Content-Type，
+        // 瀏覽器會自動加上含 boundary 的 multipart/form-data
+        const res = await fetch(UPLOAD_URL, { method: 'POST', body: formData });
+        if (!res.ok) throw new Error(await readError(res));
+        showResult(resultEl, await res.json());
+        showToast('上傳成功', 'success');
+    } catch (err) {
+        showToast(`上傳失敗：${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// ── 寫法二：XHR + 上傳進度條 ─────────────────────────────
+// 把 XHR 包成 Promise，呼叫端就能維持 async / await 的寫法
+function uploadWithProgress(url, formData, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+
+        // 上傳進度事件掛在 xhr.upload 上，不是 xhr 本身
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(JSON.parse(xhr.responseText));
+            } else {
+                // 同樣把 ValidationProblemDetails 的 errors 抓出來
+                let message = `HTTP ${xhr.status}`;
+                try {
+                    const body = JSON.parse(xhr.responseText);
+                    const messages = body.errors ? Object.values(body.errors).flat() : [];
+                    message = messages.length ? messages.join('、') : (body.title ?? message);
+                } catch { /* 不是 JSON 就維持 HTTP 狀態碼 */ }
+                reject(new Error(message));
+            }
+        };
+        xhr.onerror = () => reject(new Error('網路錯誤'));
+
+        // 與 fetch 相同：送 FormData 不要自己設 Content-Type
+        xhr.send(formData);
+    });
+}
+
+const bar = document.getElementById('upload-bar');
+const text = document.getElementById('upload-text');
+
+document.getElementById('xhr-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    const resultEl = document.getElementById('xhr-result');
+
+    const formData = new FormData();
+    formData.append('file', e.target.file.files[0]);
+    formData.append('note', '水果圖片');
+
+    btn.disabled = true;
+    bar.value = 0;
+    text.textContent = '0%';
+    try {
+        const result = await uploadWithProgress(UPLOAD_URL, formData, (percent) => {
+            bar.value = percent;
+            // 100% 只代表瀏覽器送完，伺服器可能還在寫檔，等 onload 才算真正完成
+            text.textContent = percent === 100 ? '100%，伺服器處理中…' : `${percent}%`;
+        });
+        text.textContent = '完成';
+        showResult(resultEl, result);
+        showToast('上傳成功', 'success');
+    } catch (err) {
+        text.textContent = `上傳失敗：${err.message}`;
+        showToast(`上傳失敗：${err.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100 Promise 建立與執行順序</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">Run</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      // 觀察執行順序：印出來是 1 2 4 6，兩秒後 3，接著進 catch。
+      // Promise 的建構函式（executor）是「同步」立刻執行的，所以 2 緊接在 1 之後；
+      // then / catch 的回呼則要等 resolve / reject 被呼叫後才會（非同步）執行
+      function myTest() {
+        console.log(1);
+        const p = new Promise((resolve, reject) => {
+          console.log(2);
+          // 花費時間的工作
+          setTimeout(() => {
+            console.log(3);
+            // resolve(123); // 成功處理好
+            reject(456); // 失敗：會走到 .catch，參數就是 err
+          }, 2000);
+        });
+        console.log(4);
+        // 現在只是「註冊」then 與 catch，兩秒後才會被呼叫
+        p.then((result) => {
+          console.log(5);
+          console.log({ result });
+        }).catch((err) => {
+          console.warn({ err });
+        });
+        console.log(6);
+      }
+    </script>
+  </body>
+</html>

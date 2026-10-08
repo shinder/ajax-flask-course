@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>登入 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        .field { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .field-error { color: #dc2626; font-size: .8rem; min-height: 1.1rem; margin-top: .25rem; }
+        input.invalid { border-color: #dc2626; }
+        input[type="password"] {
+            flex: 1; min-width: 0; padding: .5rem .75rem;
+            border: 1px solid #d1d5db; border-radius: .375rem; font-size: 1rem;
+        }
+        form { margin-bottom: 0; }
+        #status { display: flex; align-items: center; gap: 1rem; }
+        #status strong { flex: 1; }
+        pre { background: #f3f4f6; padding: .75rem; border-radius: .375rem; font-size: .8rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>登入</h1>
+
+    <!-- 目前登入狀態：由 GET /api/auth/me 決定，token 無效時 api.js 會收到 401 並清掉 token -->
+    <section id="status" hidden>
+        <strong id="whoami"></strong>
+        <button id="btnLogout" class="btn-secondary">登出</button>
+    </section>
+
+    <section>
+        <h2>登入</h2>
+        <p class="hint">成功後 token 會存在 localStorage，之後 api.js 發出的每個請求都會自動帶上 Authorization 標頭。</p>
+        <!-- 故意不加 required，讓後端的驗證錯誤（400）有機會回到欄位上 -->
+        <form id="loginForm" novalidate>
+            <div class="field">
+                <input type="text" name="username" placeholder="帳號" autocomplete="username" />
+                <small class="field-error" data-for="username"></small>
+            </div>
+            <div class="field">
+                <input type="password" name="password" placeholder="密碼" autocomplete="current-password" />
+                <small class="field-error" data-for="password"></small>
+            </div>
+            <button type="submit" class="btn-primary">登入</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>註冊</h2>
+        <p class="hint">帳號 3 到 20 字（英文、數字、底線），密碼至少 6 個字元。密碼在後端以 scrypt 雜湊後才存入資料庫。</p>
+        <form id="registerForm" novalidate>
+            <div class="field">
+                <input type="text" name="username" placeholder="帳號" autocomplete="username" />
+                <small class="field-error" data-for="username"></small>
+            </div>
+            <div class="field">
+                <input type="password" name="password" placeholder="密碼" autocomplete="new-password" />
+                <small class="field-error" data-for="password"></small>
+            </div>
+            <button type="submit" class="btn-primary">註冊</button>
+        </form>
+    </section>
+
+    <!-- 把 token 解開來看，讓學員理解 Payload 只是 Base64Url 編碼、不是加密 -->
+    <section id="tokenSection" hidden>
+        <h2>目前的 token</h2>
+        <p class="hint">JWT 的 Payload 任何人都能解開，所以裡面不能放敏感資料；防竄改靠的是第三段的簽章。</p>
+        <pre id="tokenRaw"></pre>
+        <pre id="tokenPayload"></pre>
+    </section>
+</main>
+<script type="module">
+import { api } from '/js/api.js';
+import { showToast } from '/js/toast.js';
+import { escapeHtml } from '/js/utils.js';
+
+const statusEl = document.getElementById('status');
+const whoamiEl = document.getElementById('whoami');
+const tokenSection = document.getElementById('tokenSection');
+
+// 把後端 400 的 errors 顯示到對應欄位旁（與 fruits.html 相同的作法）
+function showFieldErrors(form, errors = {}) {
+    form.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    form.querySelectorAll('input').forEach(el => el.classList.remove('invalid'));
+    for (const [key, messages] of Object.entries(errors)) {
+        const field = key.toLowerCase();
+        const errorEl = form.querySelector(`.field-error[data-for="${field}"]`);
+        const inputEl = form.querySelector(`input[name="${field}"]`);
+        if (errorEl) errorEl.textContent = messages.join('、');
+        if (inputEl) inputEl.classList.add('invalid');
+    }
+}
+
+// JWT 的第二段是 Base64Url 編碼的 JSON；Base64Url 把 + / 換成 - _ 且省略 = 補位，解碼前要換回來。
+// atob 只會得到 byte 字串，中文等非 ASCII 字元要先轉成 %xx 再用 decodeURIComponent 還原成 UTF-8
+function decodePayload(token) {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('')
+        .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
+    return JSON.parse(json);
+}
+
+async function refreshStatus() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        statusEl.hidden = true;
+        tokenSection.hidden = true;
+        return;
+    }
+    try {
+        // 這個請求會帶上 token；後端驗證通過才回 200
+        const me = await api.get('/api/auth/me');
+        whoamiEl.innerHTML = `目前登入：${escapeHtml(me.username)}（id = ${me.id}）`;
+        statusEl.hidden = false;
+
+        const payload = decodePayload(token);
+        document.getElementById('tokenRaw').textContent = token;
+        document.getElementById('tokenPayload').textContent =
+            JSON.stringify(payload, null, 2) +
+            `\n\n// exp 是 Unix 時間（秒）：${new Date(payload.exp * 1000).toLocaleString()} 到期`;
+        tokenSection.hidden = false;
+    } catch (err) {
+        // 401：token 過期或無效，api.js 已把 localStorage 的 token 清掉
+        statusEl.hidden = true;
+        tokenSection.hidden = true;
+        if (err.status !== 401) showToast(`無法確認登入狀態：${err.message}`, 'error');
+    }
+}
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    showFieldErrors(form);
+    try {
+        const result = await api.post('/api/auth/login', {
+            username: form.username.value,
+            password: form.password.value
+        });
+        localStorage.setItem('token', result.token);
+        form.reset();
+        showToast(`歡迎回來，${result.username}`, 'success');
+        await refreshStatus();
+    } catch (err) {
+        if (err.status === 400) showFieldErrors(form, err.data.errors);
+        else showToast(err.message, 'error');   // 401：帳號或密碼錯誤
+    }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    showFieldErrors(form);
+    try {
+        const me = await api.post('/api/auth/register', {
+            username: form.username.value,
+            password: form.password.value
+        });
+        form.reset();
+        showToast(`帳號 ${me.username} 註冊成功，請登入`, 'success');
+        // 把帳號帶到登入表單，使用者只要補密碼
+        const loginForm = document.getElementById('loginForm');
+        loginForm.username.value = me.username;
+        loginForm.password.focus();
+    } catch (err) {
+        if (err.status === 400) showFieldErrors(form, err.data.errors);
+        else showToast(err.message, 'error');   // 409：帳號已被使用
+    }
+});
+
+// JWT 是無狀態的，伺服器沒有「登出」端點可呼叫；前端把 token 丟掉就等於登出。
+// 已發出的 token 在到期前仍然有效，這是 JWT 的特性，正式專案若要立即失效需另外做黑名單。
+document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('token');
+    showToast('已登出', 'info');
+    refreshStatus();
+});
+
+refreshStatus();
+</script>
+</body>
+</html>

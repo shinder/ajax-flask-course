@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>190 fetch 遇到 404 不會進 catch</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">讀取資料</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      // fetch 的陷阱：/api/aaa 不存在，後端回 404，但 fetch 的 Promise「仍然 resolve」，
+      // 不會進 catch。只有網路層失敗（連不上、CORS 被擋）才會 reject。
+      // 要當成錯誤處理，必須自己檢查 r.ok 或 r.status
+      async function myTest() {
+        try {
+          const r = await fetch(`http://localhost:5269/api/aaa`);
+          const result = await r.text(); // 404 的 body 不一定是 JSON，用 text() 比較保險
+          console.log({ result });
+          my.innerHTML = result;
+        } catch (err) {
+          console.log(`發生錯誤`);
+        }
+      }
+    </script>
+  </body>
+</html>

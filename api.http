@@ -1,0 +1,219 @@
+# 用 VS Code 的 REST Client 擴充套件開啟，每個請求上方會出現 Send Request，點擊即可送出（講義 1-6）。
+# 請求之間用 ### 分隔。先啟動伺服器：uv run flask run（或 ./start.sh、.\start.bat）。
+
+@baseUrl = http://localhost:5269
+
+### ───────── 第 3 章：Basics ─────────
+
+### 最簡單的端點，回傳 JSON 物件
+GET {{baseUrl}}/api/basics
+
+### ───────── 第 3、5 章：Fruits（In-Memory） ─────────
+
+### 取得列表（預設第 1 頁、每頁 5 筆）
+GET {{baseUrl}}/api/fruits
+
+### 搜尋 + 排序 + 分頁（講義 5-8）
+GET {{baseUrl}}/api/fruits?name=果&sort=price_desc&page=1&size=3
+
+### 頁碼超過範圍會退回最後一頁
+GET {{baseUrl}}/api/fruits?page=999
+
+### 取得單筆
+GET {{baseUrl}}/api/fruits/1
+
+### 找不到 → 404
+GET {{baseUrl}}/api/fruits/999
+
+### 路由轉換器 <int:fruit_id>：不是整數 → 404
+GET {{baseUrl}}/api/fruits/abc
+
+### 新增 → 201 + Location
+POST {{baseUrl}}/api/fruits
+Content-Type: application/json
+
+{
+  "name": "龍眼",
+  "price": 60
+}
+
+### 新增但驗證失敗 → 400 + errors（講義 8-4）
+POST {{baseUrl}}/api/fruits
+Content-Type: application/json
+
+{
+  "name": "",
+  "price": 0
+}
+
+### 新增但型別錯誤 → 400（price 不是數字）
+POST {{baseUrl}}/api/fruits
+Content-Type: application/json
+
+{
+  "name": "龍眼",
+  "price": "很貴"
+}
+
+### 完整更新 → 204
+PUT {{baseUrl}}/api/fruits/1
+Content-Type: application/json
+
+{
+  "name": "蘋果",
+  "price": 35
+}
+
+### 刪除 → 204
+DELETE {{baseUrl}}/api/fruits/12
+
+### 慢速回應（講義 4-3 同步 vs 非同步示範），等 3 秒
+GET {{baseUrl}}/api/fruits/slow?seconds=3
+
+### 檔案上傳（講義 6-1）：把 ./static/uploads 底下任一張圖片的路徑填進去
+POST {{baseUrl}}/api/fruits/upload
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="note"
+
+水果圖片
+------Boundary
+Content-Disposition: form-data; name="file"; filename="test.png"
+Content-Type: image/png
+
+< ./static/uploads/test.png
+------Boundary--
+
+### ───────── 第 9 章：Auth（JWT） ─────────
+
+### 註冊 → 201（帳號重複 → 409）
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "secret123"
+}
+
+### 註冊但驗證失敗 → 400 + errors
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "a",
+  "password": "123"
+}
+
+### 登入 → 200 + token。
+### 「# @name login」讓後面的請求可以用 {{login.response.body.token}} 取出這次回應的 token
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "secret123"
+}
+
+### 密碼錯誤 → 401（訊息不區分帳號不存在或密碼錯誤）
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "wrong"
+}
+
+### 帶 token 查目前登入者 → 200（先送上面的登入請求，token 才會有值）
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{login.response.body.token}}
+
+### 不帶 token → 401
+GET {{baseUrl}}/api/auth/me
+
+### 竄改過的 token（簽章對不上）→ 401
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6ImhhY2tlciJ9.invalid
+
+### ───────── 第 6 章：Todos（SQLite，需登入） ─────────
+
+### 不帶 token → 401
+GET {{baseUrl}}/api/todos
+
+### 取得全部（以下請求都帶 token，請先送出上面的登入請求）
+GET {{baseUrl}}/api/todos
+Authorization: Bearer {{login.response.body.token}}
+
+### 取得單筆
+GET {{baseUrl}}/api/todos/1
+Authorization: Bearer {{login.response.body.token}}
+
+### 新增
+POST {{baseUrl}}/api/todos
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "買菜"
+}
+
+### 部分更新：只改 isDone（PATCH）
+PATCH {{baseUrl}}/api/todos/1
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "isDone": true
+}
+
+### 刪除
+DELETE {{baseUrl}}/api/todos/1
+Authorization: Bearer {{login.response.body.token}}
+
+### ───────── 第 7 章：Products（SQLite + 驗證） ─────────
+
+### 取得全部（最新的在前）
+GET {{baseUrl}}/api/products
+
+### 取得單筆
+GET {{baseUrl}}/api/products/1
+
+### 新增（imageUrl 選填，有填必須是 https）
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "香蕉",
+  "price": 15,
+  "imageUrl": null
+}
+
+### 新增但 imageUrl 不是 https → 400
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "name": "香蕉",
+  "price": 15,
+  "imageUrl": "http://example.com/a.jpg"
+}
+
+### 完整更新
+PUT {{baseUrl}}/api/products/1
+Content-Type: application/json
+
+{
+  "name": "蘋果",
+  "price": 32,
+  "imageUrl": null
+}
+
+### 刪除
+DELETE {{baseUrl}}/api/products/1
+
+### ───────── 第 6 章：SSE ─────────
+
+### 伺服器推送，連線會一直開著、每 2 秒收到一筆；REST Client 會持續顯示，按 Cancel 結束
+GET {{baseUrl}}/api/notifications/stream
+Accept: text/event-stream

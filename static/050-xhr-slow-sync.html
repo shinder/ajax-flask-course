@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>050 XHR 同步模式：慢速 API 卡住畫面</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+
+      // 同 040，但 open 的第三個參數改成 false（同步）。
+      // 請求期間整個分頁凍結 5 秒：打字沒反應、按鈕按不下去。瀏覽器已將同步 XHR 標為 deprecated
+      function loadData() {
+        // 1. 建立 XHR 物件
+        const xhr = new XMLHttpRequest();
+        // 2. 設定, 使用 "同步" 的方式處理
+        xhr.open("GET", "/api/fruits/slow?seconds=5", false);
+
+        // 3. 送出請求
+        xhr.send(); // 同步模式：卡在這一行直到回應回來，所以不需要 onload，直接往下讀 responseText
+
+        const obj = JSON.parse(xhr.responseText); // 轉換成 JS 物件
+        my.innerHTML = JSON.stringify(obj, null, 4);
+      }
+    </script>
+  </body>
+</html>

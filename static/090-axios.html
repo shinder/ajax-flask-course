@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>090 axios.get</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.20.0/dist/axios.min.js"></script>
+    <script>
+      const my = document.querySelector("#my");
+
+      // axios.get 回傳 Promise。成功時 r 是包了 status、headers、data 的物件，
+      // 真正的回應內容在 r.data，而且已依 Content-Type 自動 JSON.parse 過了；
+      // 和 fetch 不同，HTTP 4xx、5xx 會直接 reject，不必自己檢查 ok
+      function loadData() {
+        axios.get("/api/fruits").then((r) => {
+          console.log(r); // 整個回應物件
+          console.log(r.data); // 資料本體
+        });
+      }
+    </script>
+  </body>
+</html>

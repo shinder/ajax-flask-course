@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>060 XHR readyState 變化</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+
+      // 觀察 readyState 的變化：0 UNSENT、1 OPENED、2 HEADERS_RECEIVED、3 LOADING、4 DONE
+      function loadData() {
+        const xhr = new XMLHttpRequest();
+
+        // 每次 readyState 改變都會觸發；status 要到 2 之後才有值，responseText 到 3、4 才逐漸有內容
+        xhr.addEventListener("readystatechange", function () {
+          console.log("readyState:", xhr.readyState);
+          console.log("status:", xhr.status);
+          console.log("responseText:", xhr.responseText);
+        });
+
+        xhr.open("GET", "/api/fruits"); // 呼叫 open 時 readyState 變 1
+
+        // onload 等同於 readyState 變成 4 且沒有網路錯誤
+        xhr.onload = function () {
+          const obj = JSON.parse(xhr.responseText); // 轉換成 JS 物件
+          my.innerHTML = JSON.stringify(obj, null, 4);
+        };
+        xhr.onerror = function () {
+          console.log("發生錯誤");
+        };
+        // 4. 送出請求
+        xhr.send();
+      }
+    </script>
+  </body>
+</html>

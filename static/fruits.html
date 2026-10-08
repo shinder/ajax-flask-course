@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>水果清單 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #fff; }
+        th, td { padding: .5rem .75rem; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: middle; }
+        th { color: #6b7280; font-weight: 600; font-size: .9rem; }
+        td input { width: 100%; padding: .25rem .5rem; border: 1px solid #d1d5db; border-radius: .25rem; font-size: .95rem; }
+        td .actions { display: flex; gap: .25rem; justify-content: flex-end; }
+
+        /* 新增表單：每個欄位底下留一行放驗證訊息 */
+        #addForm { align-items: flex-start; }
+        .field { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .field-error { color: #dc2626; font-size: .8rem; min-height: 1.1rem; margin-top: .25rem; }
+        input.invalid { border-color: #dc2626; }
+
+        /* 搜尋與排序列 */
+        .toolbar { display: flex; gap: .5rem; align-items: center; }
+        .toolbar input[type="search"] { flex: 1; padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: .375rem; font-size: 1rem; }
+        .toolbar select { padding: .5rem; border: 1px solid #d1d5db; border-radius: .375rem; font-size: .95rem; }
+
+        /* 分頁列 */
+        .pager { display: flex; gap: .5rem; align-items: center; justify-content: center; margin-top: 1rem; color: #6b7280; font-size: .9rem; }
+        .pager button:disabled { opacity: .4; cursor: default; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>水果清單</h1>
+    <!-- 對應講義第 3 章的 In-Memory api/fruits.py（/api/fruits），重啟伺服器資料會歸零 -->
+
+    <!-- 新增表單。故意不加 required，讓後端的驗證錯誤（400）有機會回到欄位上（講義 8-4） -->
+    <form id="addForm" novalidate>
+        <div class="field">
+            <input type="text" name="name" placeholder="水果名稱" />
+            <small class="field-error" data-for="name"></small>
+        </div>
+        <div class="field" style="max-width:140px">
+            <input type="number" name="price" placeholder="價格" min="0" step="1" />
+            <small class="field-error" data-for="price"></small>
+        </div>
+        <button type="submit" class="btn-primary">新增</button>
+    </form>
+
+    <!-- 搜尋與排序：條件放查詢字串（講義 5-8、5-9） -->
+    <div class="toolbar">
+        <input type="search" id="search" placeholder="搜尋名稱（輸入即搜尋）" />
+        <select id="sort">
+            <option value="id">依 Id</option>
+            <option value="name">依名稱</option>
+            <option value="price">價格由低到高</option>
+            <option value="price_desc">價格由高到低</option>
+        </select>
+    </div>
+
+    <table id="fruit-table">
+        <thead>
+            <tr><th>Id</th><th>名稱</th><th>價格</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="pager">
+        <button id="prev" class="btn-secondary">上一頁</button>
+        <span id="page-info"></span>
+        <button id="next" class="btn-secondary">下一頁</button>
+    </div>
+</main>
+<script type="module">
+import { api } from '/js/api.js';
+import { showToast } from '/js/toast.js';
+import { escapeHtml, debounce } from '/js/utils.js';
+
+const tbody = document.querySelector('#fruit-table tbody');
+
+// 列表的查詢狀態：搜尋字、排序、頁碼。任何一個改變就重新載入。
+const state = { name: '', sort: 'id', page: 1, size: 5 };
+
+// ── 5-5 動態操作 DOM：先組好字串，再一次塞進 DOM ─────────────
+// 名稱是使用者輸入的資料，塞進 innerHTML 前一定要 escapeHtml，否則 <img onerror=...> 會被執行
+function renderFruits(fruits) {
+    const html = fruits.map(p => `
+        <tr data-id="${p.id}">
+            <td>${p.id}</td>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${p.price}</td>
+            <td class="actions">
+                <button class="btn-secondary btn-edit">編輯</button>
+                <button class="btn-danger btn-del">刪除</button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.innerHTML = html;
+}
+
+function renderPager(result) {
+    const totalPages = Math.max(result.totalPages, 1);
+    document.getElementById('page-info').textContent =
+        `第 ${result.page} / ${totalPages} 頁，共 ${result.total} 筆`;
+    document.getElementById('prev').disabled = result.page <= 1;
+    document.getElementById('next').disabled = result.page >= totalPages;
+}
+
+// ── 5-6 載入狀態 + 5-8 查詢字串 + 5-9 取消過期請求 ──────────────
+let controller = null;   // 記住上一次請求的 AbortController
+
+async function loadFruits() {
+    // 5-9：上一個請求還沒回來就取消它，避免舊回應蓋掉新結果
+    controller?.abort();
+    controller = new AbortController();
+
+    // 5-8：用 URLSearchParams 組查詢字串，會自動處理中文與特殊字元的編碼
+    const params = new URLSearchParams({
+        name: state.name,
+        sort: state.sort,
+        page: state.page,
+        size: state.size,
+    });
+
+    tbody.innerHTML = '<tr><td colspan="4">載入中…</td></tr>';
+
+    try {
+        const result = await api.get(`/api/fruits?${params}`, { signal: controller.signal });
+        if (result.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">目前沒有水果</td></tr>';
+        } else {
+            renderFruits(result.items);
+        }
+        renderPager(result);
+    } catch (err) {
+        if (err.name === 'AbortError') return;   // 被自己取消的，不是錯誤
+        tbody.innerHTML = `<tr><td colspan="4">載入失敗：${escapeHtml(err.message)}</td></tr>`;
+    }
+}
+
+// 搜尋框：debounce 300ms，停止打字後才發請求；換條件就回到第 1 頁
+document.getElementById('search').addEventListener('input', debounce((e) => {
+    state.name = e.target.value.trim();
+    state.page = 1;
+    loadFruits();
+}, 300));
+
+document.getElementById('sort').addEventListener('change', (e) => {
+    state.sort = e.target.value;
+    state.page = 1;
+    loadFruits();
+});
+
+document.getElementById('prev').addEventListener('click', () => { state.page--; loadFruits(); });
+document.getElementById('next').addEventListener('click', () => { state.page++; loadFruits(); });
+
+// ── 8-4 把 400 的驗證錯誤對應到欄位 ────────────────────────────
+// ProblemDetails 的 errors 長這樣：{ "Name": ["名稱不可為空"], "Price": ["價格必須大於 0"] }
+// key 是 C# 的屬性名稱（PascalCase），對到 input 的 name 時統一轉小寫比對
+function showFieldErrors(form, errors = {}) {
+    form.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    form.querySelectorAll('input').forEach(el => el.classList.remove('invalid'));
+
+    for (const [key, messages] of Object.entries(errors)) {
+        const field = key.toLowerCase();
+        const errorEl = form.querySelector(`.field-error[data-for="${field}"]`);
+        const inputEl = form.querySelector(`input[name="${field}"]`);
+        if (errorEl) errorEl.textContent = messages.join('、');
+        if (inputEl) inputEl.classList.add('invalid');
+    }
+}
+
+document.getElementById('addForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button');
+    btn.disabled = true;   // 防止連點造成重複送出
+    try {
+        await api.post('/api/fruits', {
+            name: form.name.value.trim(),
+            price: Number(form.price.value),
+        });
+        showFieldErrors(form);   // 清掉上一次的錯誤
+        form.reset();
+        showToast('新增成功', 'success');
+        await loadFruits();
+    } catch (err) {
+        if (err.status === 400 && err.data?.errors) {
+            showFieldErrors(form, err.data.errors);
+        } else {
+            showToast(err.message, 'error');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// ── 5-10 編輯流程：把該列換成輸入框，帶入舊值，儲存時送 PUT ──────
+function startEdit(tr) {
+    const [idCell, nameCell, priceCell, actionCell] = tr.children;
+    const name = nameCell.textContent;
+    const price = priceCell.textContent;
+
+    // 帶入舊值。value 屬性也是塞進 HTML，一樣要跳脫
+    nameCell.innerHTML  = `<input name="name" value="${escapeHtml(name)}" />`;
+    priceCell.innerHTML = `<input name="price" type="number" value="${escapeHtml(price)}" />`;
+    actionCell.innerHTML = `
+        <button class="btn-primary btn-save">儲存</button>
+        <button class="btn-secondary btn-cancel">取消</button>
+    `;
+    nameCell.querySelector('input').focus();
+}
+
+async function saveEdit(tr) {
+    const id = Number(tr.dataset.id);
+    const dto = {
+        name: tr.querySelector('input[name="name"]').value.trim(),
+        price: Number(tr.querySelector('input[name="price"]').value),
+    };
+    try {
+        await api.put(`/api/fruits/${id}`, dto);   // PUT：完整更新，所有欄位都要送
+        showToast('已更新', 'success');
+        await loadFruits();
+    } catch (err) {
+        if (err.status === 400 && err.data?.errors) {
+            showToast(Object.values(err.data.errors).flat().join('\n'), 'error');
+        } else {
+            showToast(err.message, 'error');
+        }
+    }
+}
+
+// ── 6-3 Optimistic UI：先把該列移除，失敗再重新載入復原 ──────────
+async function deleteFruit(id, rowElement) {
+    rowElement.remove();
+
+    try {
+        await api.delete(`/api/fruits/${id}`);
+        await loadFruits();   // 成功後也重新載入，讓「共 N 筆」與分頁狀態跟上；使用者看到的仍是先消失、再補齊
+    } catch (err) {
+        showToast('刪除失敗，已復原', 'error');
+        await loadFruits();
+    }
+}
+
+// 事件委派：tbody 只掛一個 click 監聽，依按鈕的 class 分流
+tbody.addEventListener('click', (e) => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    if (e.target.classList.contains('btn-edit'))   startEdit(tr);
+    if (e.target.classList.contains('btn-save'))   saveEdit(tr);
+    if (e.target.classList.contains('btn-cancel')) loadFruits();
+    if (e.target.classList.contains('btn-del'))    deleteFruit(Number(tr.dataset.id), tr);
+});
+
+loadFruits();
+</script>
+</body>
+</html>

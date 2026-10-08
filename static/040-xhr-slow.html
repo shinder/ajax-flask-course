@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>040 XHR 非同步：慢速 API 不卡畫面</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+
+      // 呼叫會等 5 秒才回應的 API。請求期間試著在輸入框打字：
+      // 畫面不會卡，因為 XHR 預設是非同步，send() 之後主執行緒就空出來了
+      function loadData() {
+        // 1. 建立 XHR 物件
+        const xhr = new XMLHttpRequest();
+        // 2. 設定
+        xhr.open("GET", "/api/fruits/slow?seconds=5"); // 後端故意等 5 秒才回
+
+        // 3. 註冊事件處理器
+        xhr.onload = function () {
+          const obj = JSON.parse(xhr.responseText); // 轉換成 JS 物件
+          my.innerHTML = JSON.stringify(obj, null, 4);
+        };
+        xhr.onerror = function () {
+          console.log("發生錯誤");
+        };
+        // 4. 送出請求
+        xhr.send();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,416 @@
+# OpenAPI 3.1 規格（對應講義 2-5）。/swagger 頁面會讀這個檔案畫出 Swagger UI。
+# Flask 不像 ASP.NET Core 會自動產生，這份是手寫的；優點是學員看得到規格長什麼樣子。
+openapi: 3.1.0
+info:
+  title: Flask AJAX API
+  version: "1.0"
+  description: 課程講義《AJAX + RESTful API 使用 Flask》的範例 API
+servers:
+  - url: http://localhost:5269
+
+# 全域套用 Bearer：所有端點都顯示鎖頭。沒加 @login_required 的端點不帶 token 一樣能呼叫。
+security:
+  - Bearer: []
+
+tags:
+  - { name: Basics, description: 最簡單的端點（3-1） }
+  - { name: Fruits, description: In-Memory CRUD，重啟後歸零（3-4、5-8、4-3、6-1） }
+  - { name: Auth, description: JWT 註冊、登入（第 9 章） }
+  - { name: Todos, description: SQLite CRUD，需登入（6-6、7-4、9-5） }
+  - { name: Products, description: SQLite CRUD（7-4） }
+  - { name: Notifications, description: SSE 推送（6-2） }
+
+paths:
+  /api/basics:
+    get:
+      tags: [Basics]
+      summary: "回傳 {\"message\": \"Hello API\"} 這個 JSON 物件"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { message: Hello API }
+
+  /api/fruits:
+    get:
+      tags: [Fruits]
+      summary: 列表：搜尋、排序、分頁
+      parameters:
+        - { name: name, in: query, schema: { type: string }, description: 名稱包含關鍵字（不分大小寫） }
+        - { name: sort, in: query, schema: { type: string, enum: [id, name, price, price_desc], default: id } }
+        - { name: page, in: query, schema: { type: integer, default: 1, minimum: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 5, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: 分頁結果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PagedFruits" }
+    post:
+      tags: [Fruits]
+      summary: 新增（名稱 1 到 20 字、價格 1 到 10000）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FruitInput" }
+      responses:
+        "201":
+          description: 已建立，Location 標頭指向新資源
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fruit" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /api/fruits/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Fruits]
+      summary: 取得單筆
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fruit" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Fruits]
+      summary: 完整更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FruitInput" }
+      responses:
+        "204": { description: 已更新 }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Fruits]
+      summary: 刪除
+      responses:
+        "204": { description: 已刪除 }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/fruits/slow:
+    get:
+      tags: [Fruits]
+      summary: 等待指定秒數後回傳全部，供同步 vs 非同步示範（4-3）
+      parameters:
+        - { name: seconds, in: query, schema: { type: integer, default: 10, minimum: 1, maximum: 30 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { waitedSeconds: 3, items: [{ id: 1, name: 蘋果, price: 30 }] }
+
+  /api/fruits/upload:
+    post:
+      tags: [Fruits]
+      summary: 上傳圖片（jpg、png、gif、webp，最大 2 MB），存到 static/uploads（6-1）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                note: { type: string }
+      responses:
+        "200":
+          description: 上傳成功
+          content:
+            application/json:
+              example: { url: /uploads/3f2a....png, size: 12345, note: 水果圖片 }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "413": { description: 超過 2 MB }
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: 註冊（帳號 3 到 20 字英數底線、密碼 6 到 64 字）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "201":
+          description: 已建立
+          content:
+            application/json:
+              example: { id: 1, username: alice }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { description: 帳號已被使用 }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: 登入，成功回傳 token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { token: eyJhbGciOi..., expiresAt: "2026-10-08T08:38:47Z", username: alice }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { description: 帳號或密碼錯誤 }
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: 需帶 token，回傳目前登入者
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 1, username: alice }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/todos:
+    get:
+      tags: [Todos]
+      summary: 取得所有待辦
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Todo" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Todos]
+      summary: 新增待辦
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, examples: [買菜] }
+      responses:
+        "201":
+          description: 已建立
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Todo" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/todos/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Todos]
+      summary: 取得單筆
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Todo" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Todos]
+      summary: 部分更新：只改完成狀態
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isDone]
+              properties:
+                isDone: { type: boolean }
+      responses:
+        "204": { description: 已更新 }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Todos]
+      summary: 刪除
+      responses:
+        "204": { description: 已刪除 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/products:
+    get:
+      tags: [Products]
+      summary: 取得所有商品（最新的在前）
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+    post:
+      tags: [Products]
+      summary: 新增商品（imageUrl 選填，有填必須是 https）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201":
+          description: 已建立
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /api/products/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Products]
+      summary: 取得單筆
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Products]
+      summary: 完整更新
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "204": { description: 已更新 }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Products]
+      summary: 刪除
+      responses:
+        "204": { description: 已刪除 }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: "text/event-stream，每 2 秒推送 seq、time、fruitCount（Swagger UI 無法顯示串流，請用 sse-demo.html）"
+      security: []
+      responses:
+        "200":
+          description: SSE 串流
+          content:
+            text/event-stream:
+              example: |
+                data: {"seq": 1, "time": "2026-10-08T07:38:47Z", "fruitCount": 12}
+
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 先呼叫 POST /api/auth/login 取得 token，貼到下方欄位（不用加 Bearer 前綴）
+
+  responses:
+    ValidationError:
+      description: 驗證失敗，errors 的 key 是欄位名
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example:
+            title: 輸入資料有誤
+            status: 400
+            errors: { name: [名稱不可為空], price: [價格必須大於 0] }
+    NotFound:
+      description: 找不到資源
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example: { title: 找不到資源, status: 404 }
+    Unauthorized:
+      description: 沒帶 token、token 過期或簽章不符
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example: { title: 請先登入, status: 401 }
+
+  schemas:
+    Problem:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: integer }
+        errors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+    Fruit:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        price: { type: number }
+    FruitInput:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string, maxLength: 20, examples: [龍眼] }
+        price: { type: number, exclusiveMinimum: 0, maximum: 10000, examples: [60] }
+    PagedFruits:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Fruit" } }
+        total: { type: integer }
+        page: { type: integer }
+        size: { type: integer }
+        totalPages: { type: integer }
+    Credentials:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, examples: [alice] }
+        password: { type: string, format: password, examples: [secret123] }
+    Todo:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        isDone: { type: boolean }
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        price: { type: number }
+        imageUrl: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time, description: UTC，結尾帶 Z }
+    ProductInput:
+      type: object
+      required: [name, price]
+      properties:
+        name: { type: string, maxLength: 100, examples: [香蕉] }
+        price: { type: number, exclusiveMinimum: 0, maximum: 1000000, examples: [15] }
+        imageUrl: { type: [string, "null"], description: 選填，有填必須以 https:// 開頭 }

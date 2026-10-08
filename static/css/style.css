@@ -1,0 +1,99 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+}
+
+main {
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+h1 { margin-bottom: 1.5rem; }
+
+nav {
+    background: #1e293b;
+    padding: .75rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+nav a { color: #cbd5e1; text-decoration: none; font-size: .95rem; }
+nav a:hover { color: #fff; }
+
+/* 表單 */
+form { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+input[type="text"],
+input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    padding: .5rem .75rem;
+    border: 1px solid #d1d5db;
+    border-radius: .375rem;
+    font-size: 1rem;
+}
+button {
+    padding: .5rem 1rem;
+    border: none;
+    border-radius: .375rem;
+    cursor: pointer;
+    font-size: .95rem;
+}
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { background: #93c5fd; cursor: default; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-secondary { background: #e5e7eb; color: #374151; }
+.btn-secondary:hover { background: #d1d5db; }
+
+/* 示範頁共用的區塊與說明文字 */
+section {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: .5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+section h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
+.hint { color: #6b7280; font-size: .9rem; }
+
+/* 清單 */
+ul { list-style: none; padding: 0; margin: 0; }
+li {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: .5rem;
+    padding: .75rem 1rem;
+    margin-bottom: .5rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+li.done span { text-decoration: line-through; color: #9ca3af; }
+li span { flex: 1; }
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    padding: .75rem 1.25rem;
+    border-radius: .5rem;
+    color: #fff;
+    font-size: .95rem;
+    z-index: 9999;
+    animation: slideIn .2s ease;
+}
+.toast--success { background: #22c55e; }
+.toast--error   { background: #ef4444; }
+.toast--info    { background: #3b82f6; }
+
+@keyframes slideIn {
+    from { transform: translateY(1rem); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>080 jQuery $.get</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+      const my = $("#my");
+
+      // jQuery 的 $.get(url, data, callback, dataType)：data 會變成查詢字串 ?a=1&b=2
+      function loadData() {
+        /*
+        $.get("/api/fruits", function (result) {
+          console.log(result); // 預設是拿到 JS 物件
+        });
+        */
+        $.get(
+          "/api/fruits",
+          { a: 1, b: 2 },
+          function (result) {
+            console.log(result); // 預設是拿到 JS 物件
+            my.text(result);
+          },
+          "text", // 指定拿到純文字的資料；省略時 jQuery 依回應的 Content-Type 自動判斷，JSON 會轉成物件
+        );
+      }
+    </script>
+  </body>
+</html>

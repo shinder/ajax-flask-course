@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>020 XHR 基本流程：open、onload、send</title>
+  </head>
+  <body>
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+      // 1. 建立 XHR 物件
+      const xhr = new XMLHttpRequest();
+      // 2. 設定：方法與網址（這裡寫完整網址；同源時寫 /api/fruits 也可以，見 030）
+      xhr.open("GET", "http://localhost:5269/api/fruits");
+
+      // 3. 註冊事件處理器：回應完成時觸發 onload，responseText 是「字串」
+      xhr.onload = function () {
+        my.innerHTML = xhr.responseText;
+      };
+      // 連線層級的錯誤（伺服器沒開、網路斷線）才會進 onerror；HTTP 404、500 仍算 onload
+      xhr.onerror = function () {
+        console.log("發生錯誤");
+      };
+      // 4. 送出請求：send() 立刻回傳、不等回應，回應回來時瀏覽器才呼叫 onload
+      xhr.send();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>商品管理 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        .price { color: #6b7280; font-size: .9rem; min-width: 80px; }
+        .time  { color: #9ca3af; font-size: .8rem; }   /* createdAt 是 ISO 8601 UTC 字串，用 Date 轉成本地時間顯示 */
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>商品管理</h1>
+    <form id="addForm">
+        <input type="text"   name="name"     placeholder="商品名稱" required />
+        <input type="number" name="price"    placeholder="價格" min="0.01" step="0.01" required style="max-width:120px" />
+        <input type="url"    name="imageUrl" placeholder="圖片網址（選填，須 https）" />
+        <button type="submit" class="btn-primary">新增</button>
+    </form>
+    <ul id="productList"></ul>
+</main>
+<script type="module">
+import { api } from '/js/api.js';
+import { showToast } from '/js/toast.js';
+import { escapeHtml } from '/js/utils.js';
+
+// 圖片網址是使用者填的，不保證存在；載入失敗時用 onerror 把 <img> 移掉，避免出現破圖
+async function loadProducts() {
+    const products = await api.get('/api/products');
+    const list = document.getElementById('productList');
+    list.innerHTML = products.map(p => `
+        <li data-id="${p.id}">
+            ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="" onerror="this.remove()" style="width:40px;height:40px;object-fit:cover;border-radius:.25rem" />` : ''}
+            <span>${escapeHtml(p.name)}</span>
+            <span class="price">$${p.price}</span>
+            <span class="time">${new Date(p.createdAt).toLocaleString('zh-TW')}</span>
+            <button class="btn-danger btn-delete">刪除</button>
+        </li>
+    `).join('');
+}
+
+document.getElementById('addForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    try {
+        const imageUrl = e.target.imageUrl.value.trim();
+        await api.post('/api/products', {
+            name: e.target.name.value.trim(),
+            price: Number(e.target.price.value),
+            imageUrl: imageUrl || null
+        });
+        showToast('新增成功', 'success');
+        e.target.reset();
+        await loadProducts();
+    } catch (err) {
+        // 後端回傳 400 + Problem Details 時，errors 欄位含各欄位的錯誤訊息
+        if (err.status === 400 && err.data?.errors) {
+            const messages = Object.values(err.data.errors).flat().join('\n');
+            showToast(messages, 'error');
+        } else {
+            showToast(err.message, 'error');
+        }
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('productList').addEventListener('click', async e => {
+    if (!e.target.classList.contains('btn-delete')) return;
+    const li = e.target.closest('li');
+    const id = Number(li.dataset.id);
+    const btn = e.target;
+
+    btn.disabled = true;
+    li.remove();
+    try {
+        await api.delete(`/api/products/${id}`);
+    } catch {
+        await loadProducts();
+        showToast('刪除失敗', 'error');
+    }
+});
+
+loadProducts().catch(err => showToast(`載入失敗：${err.message}`, 'error'));
+</script>
+</body>
+</html>

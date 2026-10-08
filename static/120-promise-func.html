@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>120 Promise.all 等全部完成</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">Run</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      function myPromise(n = "a") {
+        return new Promise((resolve, reject) => {
+          const ms = 100 + Math.random() * 500;
+          setTimeout(() => {
+            resolve({ n, ms });
+          }, ms);
+        });
+      }
+
+      // 十個 Promise「同時」開始，不是一個接一個；Promise.all 等全部 resolve 後才通知，
+      // 結果陣列的順序與傳入順序相同，和誰先完成無關。總時間約等於最慢的那一個
+      function myTest() {
+        const arr = [];
+        for (let i = 0; i < 10; i++) {
+          arr.push(myPromise("a" + i)); // 呼叫的當下就開始計時了
+          // myPromise("a" + i).then((r) => console.log(r));
+        }
+        // 全部都做完後再通知
+        Promise.all(arr).then((r) => console.log(r));
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>210 傳統表單送出（multipart/form-data）</title>
+  </head>
+  <body>
+    <!--
+      沒有 action 就送回目前網址。enctype 改為 multipart/form-data 後，
+      到 Network 觀察 body：變成一段一段以 boundary 分隔的格式，這也是上傳檔案要用的格式（見 240）
+    -->
+    <form method="post" enctype="multipart/form-data">
+      <input type="text" name="aa" value="1" />
+      <br />
+      <input type="text" name="bb" value="您好" />
+      <br />
+      <input type="password" name="cc" />
+      <br />
+
+      <input type="submit" />
+    </form>
+  </body>
+</html>

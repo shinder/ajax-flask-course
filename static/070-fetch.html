@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>070 fetch 基本用法與 Response 物件</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+
+      // fetch 回傳 Promise，用 .then 串接；上面註解掉的版本可以看到 Response 物件的內容
+      function loadData() {
+        /*
+        fetch("/api/fruits")
+          .then(function (response) {
+            // readyState: 2
+            const { ok, status, type } = response; // 解構
+            console.log(response);
+            console.log({ ok, status, type });
+            // return response.json(); // 後面進來的資料完成後做 JSON.parse()
+            return response.text(); // 後面進來的資料完成後看成是一般文字資料
+          })
+          .then((result) => {
+            // readyState: 4
+            console.log(result);
+          });
+          */
+        fetch("/api/fruits")
+          .then((r) => r.json()) // 第一個 then 拿到 Response（只有標頭），json() 再等 body 下載完並解析
+          .then((result) => {
+            console.log(result); // 這裡才是真正的資料
+          })
+          .catch((err) => {
+            console.warn(err); // 只有網路層錯誤會進來；HTTP 404、500 不會（見 190）
+          });
+      }
+    </script>
+  </body>
+</html>

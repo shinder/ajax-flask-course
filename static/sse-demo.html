@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>SSE 推送 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        .controls { display: flex; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+        .status { font-size: .9rem; color: #6b7280; }
+        .status b { color: #111827; }
+        .messages { font-family: ui-monospace, monospace; font-size: .85rem; background: #f9fafb; border-radius: .375rem; padding: .75rem; max-height: 16rem; overflow-y: auto; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">登入</a>
+</nav>
+<main>
+    <h1>SSE 推送</h1>
+    <!-- 對應講義 6-2。後端 GET /api/notifications/stream 每 2 秒推一筆 -->
+
+    <section>
+        <h2>連線</h2>
+        <div class="controls">
+            <button id="btn-connect" class="btn-primary">連線</button>
+            <button id="btn-close" class="btn-secondary" disabled>關閉</button>
+            <span class="status">狀態：<b id="state">未連線</b>，已收到 <b id="count">0</b> 筆</span>
+        </div>
+        <p class="hint">
+            連線後到另一個分頁的「水果清單」新增或刪除幾筆，這裡的 fruitCount 會跟著變。
+            EventSource 斷線會自動重連，可以把後端停掉再啟動觀察狀態變化。
+        </p>
+        <div class="messages" id="messages">尚未連線。</div>
+    </section>
+</main>
+<script>
+const stateEl = document.getElementById('state');
+const countEl = document.getElementById('count');
+const messagesEl = document.getElementById('messages');
+const btnConnect = document.getElementById('btn-connect');
+const btnClose = document.getElementById('btn-close');
+
+let source = null;
+let received = 0;
+
+// readyState：0 CONNECTING、1 OPEN、2 CLOSED
+const STATE_TEXT = ['連線中…', '已連線', '已關閉'];
+function showState() {
+    stateEl.textContent = source ? STATE_TEXT[source.readyState] : '未連線';
+    btnConnect.disabled = !!source;
+    btnClose.disabled = !source;
+}
+
+function append(line) {
+    messagesEl.textContent += `\n${line}`;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+btnConnect.addEventListener('click', () => {
+    received = 0;
+    countEl.textContent = '0';
+    messagesEl.textContent = '開始連線…';
+
+    // 同源所以用相對路徑；跨來源時要在後端 CORS 允許，EventSource 一樣受同源政策約束
+    source = new EventSource('/api/notifications/stream');
+    showState();
+
+    source.onopen = () => {
+        showState();
+        append('連線建立');
+    };
+
+    // 沒有指定事件名稱的訊息會觸發 onmessage，e.data 是伺服器 "data:" 後面的文字
+    source.onmessage = (e) => {
+        let data;
+        try {
+            data = JSON.parse(e.data);
+        } catch {
+            append(`收到無法解析的訊息：${e.data}`);
+            return;
+        }
+        received++;
+        countEl.textContent = received;
+        append(`#${data.seq}  ${new Date(data.time).toLocaleTimeString('zh-TW')}  水果總數 ${data.fruitCount}`);
+    };
+
+    // 斷線時會進來，EventSource 預設會自動重連（readyState 回到 CONNECTING）；
+    // 但若是致命錯誤（例如端點 404），readyState 會是 CLOSED，不會再重連，這時要放掉 source 讓使用者能重新連
+    source.onerror = () => {
+        if (source.readyState === EventSource.CLOSED) {
+            append('連線已關閉（伺服器拒絕或端點不存在），可重新按「連線」');
+            source = null;
+        } else {
+            append('連線中斷，瀏覽器會自動重連…');
+        }
+        showState();
+    };
+});
+
+btnClose.addEventListener('click', () => {
+    source.close();      // 主動關閉，之後不會再重連；後端的 CancellationToken 也會被取消
+    append('已手動關閉');
+    source = null;
+    showState();
+});
+
+showState();
+</script>
+</body>
+</html>

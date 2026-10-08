@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>030 XHR 按鈕載入與 JSON.parse</title>
+  </head>
+  <body>
+    <button id="btn" onclick="loadData()">載入資料</button>
+    <input type="text" />
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      const my = document.querySelector("#my");
+
+      // 按鈕按下才發請求。和 020 的差別：改用相對路徑、把回應字串轉成物件
+      function loadData() {
+        // 1. 建立 XHR 物件
+        const xhr = new XMLHttpRequest();
+        // 2. 設定
+        xhr.open("GET", "/api/fruits"); // 相對路徑：同源（同一個主機與 port）時不必寫主機
+
+        // 3. 註冊事件處理器
+        xhr.onload = function () {
+          const obj = JSON.parse(xhr.responseText); // 轉換成 JS 物件
+          my.innerHTML = JSON.stringify(obj, null, 4); // 再轉回字串只是為了排版顯示（縮排 4 格）
+        };
+        xhr.onerror = function () {
+          console.log("發生錯誤");
+        };
+        // 4. 送出請求
+        xhr.send();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>010 alert 是同步的</title>
+  </head>
+  <body>
+    <h1 id="my">123</h1>
+
+    <script>
+      // 先改 DOM 再跳 alert：alert 是「同步」的，會卡住主執行緒，
+      // 瀏覽器在 alert 關閉前不會重繪，所以畫面上還看不到「您好」，
+      // 按下確定後才一次畫出來。這是理解「同步會卡住畫面」的最小例子。
+      const my = document.querySelector("#my");
+      my.innerHTML = "您好";
+      alert("警告~"); // 同步：這一行結束前，後面的程式與畫面更新都要等
+    </script>
+  </body>
+</html>

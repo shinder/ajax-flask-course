@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    />
+    <title>230 FormData 轉物件後 fetch POST</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Card title</h5>
+              <!--
+              <form onsubmit="mySubmit(event)">
+              -->
+              <form name="form1">
+                <div class="mb-3">
+                  <label for="pName" class="form-label">產品名稱</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="pName"
+                    name="name"
+                  />
+                  <div class="form-text"></div>
+                </div>
+                <div class="mb-3">
+                  <label for="pPrice" class="form-label">產品價格</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="pPrice"
+                    name="price"
+                  />
+                  <div class="form-text"></div>
+                </div>
+                <div class="mb-3">
+                  <label for="pImage" class="form-label">產品圖</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="pImage"
+                    name="imageUrl"
+                    value="https://www.aaa.com/image.jpg"
+                  />
+                  <div class="form-text"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    ></script>
+    <script>
+      // 和 220 相同的流程，但用 FormData 一次收集所有欄位；
+      // 欄位的 name 要和後端 DTO 的屬性名對應（name、price、imageUrl）
+      const mySubmit = async (e) => {
+        e.preventDefault(); // 避免預設行為 (不要讓表單送出)
+        const fd = new FormData(document.form1); // 複製表單內容成為 FormData 物件
+        // ** 欄位名稱不可重複
+        const data = Object.fromEntries(fd.entries()); // entries 轉換成一般物件；同名欄位只會留最後一個
+
+        const r = await fetch("/api/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+        const result = await r.text(); // 視為純文字：成功是 JSON、驗證失敗是 Problem Details
+
+        alert(result);
+      };
+
+      document.form1.addEventListener("submit", mySubmit); // 註冊事件處理器
+    </script>
+  </body>
+</html>

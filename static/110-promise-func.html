@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>110 回傳 Promise 的函式與 then 串接</title>
+  </head>
+  <body>
+    <button id="btn" onclick="myTest()">Run</button>
+
+    <hr />
+
+    <pre id="my"></pre>
+
+    <script>
+      // 把「會花時間的工作」包成回傳 Promise 的函式：隨機等 100 到 600 毫秒後 resolve
+      function myPromise(n = "a") {
+        return new Promise((resolve, reject) => {
+          const ms = 100 + Math.random() * 500;
+          setTimeout(() => {
+            resolve({ n, ms });
+          }, ms);
+        });
+      }
+
+      // 串接：在 then 裡「回傳」另一個 Promise，下一個 then 就會等它完成再執行，
+      // 所以 a2 一定在 a1 之後印，不管誰的毫秒數比較短
+      function myTest() {
+        myPromise("a1")
+          .then((result) => {
+            console.log(result);
+            return myPromise("a2"); // 回傳 Promise，讓下一個 then 等它
+          })
+          .then((result) => {
+            console.log(result);
+          });
+      }
+    </script>
+  </body>
+</html>
