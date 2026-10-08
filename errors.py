@@ -95,8 +95,8 @@ def parse_body[T: BaseModel](model: type[T]) -> T:
         raise ProblemError(400, "輸入資料有誤", _errors_from_pydantic(exc)) from None
 
 
-def register(app):
-    """把三個錯誤處理器掛到 app 上。"""
+def init_app(app):
+    """把三個錯誤處理器掛到 app 上（和 db.init_app 一樣的慣例）。"""
 
     # 1. 我們自己丟的 ProblemError：400 驗證錯誤、401、409 等「預期內」的錯誤
     @app.errorhandler(ProblemError)

@@ -4,11 +4,13 @@
 SQL 一律用 ? 佔位參數，絕對不要用字串格式化把使用者輸入拼進 SQL（SQL Injection）。
 """
 
-from flask import abort, url_for
+from flask import Blueprint, abort, url_for
 
 from db import get_db, utc_now_iso
 from errors import parse_body
 from schemas import Product, ProductDto
+
+bp = Blueprint("products", __name__, url_prefix="/api/products")
 
 
 def _row_to_product(row) -> dict:
@@ -24,51 +26,54 @@ def _fetch(product_id: int):
     return row
 
 
-def register(app):
-    # GET /api/products：取得所有商品，最新的在前
-    @app.get("/api/products")
-    def get_products():
-        rows = get_db().execute("SELECT * FROM products ORDER BY created_at DESC, id DESC").fetchall()
-        return [_row_to_product(r) for r in rows]
+# GET /api/products：取得所有商品，最新的在前
+@bp.get("")
+def get_products():
+    rows = get_db().execute("SELECT * FROM products ORDER BY created_at DESC, id DESC").fetchall()
+    return [_row_to_product(r) for r in rows]
 
-    # GET /api/products/5 → 200 或 404
-    @app.get("/api/products/<int:product_id>")
-    def get_product(product_id: int):
-        return _row_to_product(_fetch(product_id))
 
-    # POST /api/products → 201 + Location 或 400
-    @app.post("/api/products")
-    def create_product():
-        dto = parse_body(ProductDto)
-        db = get_db()
-        cursor = db.execute(
-            "INSERT INTO products (name, price, image_url, created_at) VALUES (?, ?, ?, ?)",
-            # 時間由伺服器決定，不信任用戶端
-            (dto.name, dto.price, dto.image_url, utc_now_iso()),
-        )
-        db.commit()                       # sqlite3 預設開啟交易，要 commit 才會真的寫入
-        product_id = cursor.lastrowid     # 自動產生的主鍵
-        product = _row_to_product(_fetch(product_id))
-        return product, 201, {"Location": url_for("get_product", product_id=product_id)}
+# GET /api/products/5 → 200 或 404
+@bp.get("/<int:product_id>")
+def get_product(product_id: int):
+    return _row_to_product(_fetch(product_id))
 
-    # PUT /api/products/5：完整更新（所有欄位都要送，即使沒改）→ 204、404 或 400
-    @app.put("/api/products/<int:product_id>")
-    def update_product(product_id: int):
-        _fetch(product_id)                # 不存在就 404
-        dto = parse_body(ProductDto)
-        db = get_db()
-        db.execute(
-            "UPDATE products SET name = ?, price = ?, image_url = ? WHERE id = ?",
-            (dto.name, dto.price, dto.image_url, product_id),
-        )
-        db.commit()
-        return "", 204
 
-    # DELETE /api/products/5 → 204 或 404
-    @app.delete("/api/products/<int:product_id>")
-    def delete_product(product_id: int):
-        _fetch(product_id)
-        db = get_db()
-        db.execute("DELETE FROM products WHERE id = ?", (product_id,))
-        db.commit()
-        return "", 204
+# POST /api/products → 201 + Location 或 400
+@bp.post("")
+def create_product():
+    dto = parse_body(ProductDto)
+    db = get_db()
+    cursor = db.execute(
+        "INSERT INTO products (name, price, image_url, created_at) VALUES (?, ?, ?, ?)",
+        # 時間由伺服器決定，不信任用戶端
+        (dto.name, dto.price, dto.image_url, utc_now_iso()),
+    )
+    db.commit()                       # sqlite3 預設開啟交易，要 commit 才會真的寫入
+    product_id = cursor.lastrowid     # 自動產生的主鍵
+    product = _row_to_product(_fetch(product_id))
+    return product, 201, {"Location": url_for("products.get_product", product_id=product_id)}
+
+
+# PUT /api/products/5：完整更新（所有欄位都要送，即使沒改）→ 204、404 或 400
+@bp.put("/<int:product_id>")
+def update_product(product_id: int):
+    _fetch(product_id)                # 不存在就 404
+    dto = parse_body(ProductDto)
+    db = get_db()
+    db.execute(
+        "UPDATE products SET name = ?, price = ?, image_url = ? WHERE id = ?",
+        (dto.name, dto.price, dto.image_url, product_id),
+    )
+    db.commit()
+    return "", 204
+
+
+# DELETE /api/products/5 → 204 或 404
+@bp.delete("/<int:product_id>")
+def delete_product(product_id: int):
+    _fetch(product_id)
+    db = get_db()
+    db.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    db.commit()
+    return "", 204

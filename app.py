@@ -1,4 +1,4 @@
-"""應用程式入口：建立 Flask app、載入設定、掛上各個模組（對應講義第 2 章）。
+"""應用程式入口：建立 Flask app、載入設定、註冊各個 Blueprint（對應講義第 2 章）。
 
 啟動方式（擇一）：
     uv run flask run        # 讀 .flaskenv 的 FLASK_RUN_PORT=8000、FLASK_DEBUG=1
@@ -52,7 +52,7 @@ if len(app.config["JWT_KEY"].encode()) < 32:
     )
 
 # ════════════════════════════════════════════════════════════
-# 第二區：掛上各個模組（順序不影響路由比對）
+# 第二區：掛上擴充與各個 Blueprint（順序不影響路由比對）
 # ════════════════════════════════════════════════════════════
 
 # CORS（跨來源資源共用，6-5）：瀏覽器的同源政策會擋住不同 port 的請求，
@@ -65,14 +65,15 @@ CORS(app, always_send=False, resources={r"/api/*": {"origins": [
 ]}})
 
 db.init_app(app)          # 請求結束關連線、flask init-db 指令、啟動時建表
-errors.register(app)      # 400/401/404/500 統一回 JSON（8-3）
+errors.init_app(app)      # 400/401/404/500 統一回 JSON（8-3）
 
-basics.register(app)          # GET  /api/basics                 3-1
-fruits.register(app)          # CRUD /api/fruits（In-Memory）      3-4、5-8、4-3、6-1
-todos.register(app)           # CRUD /api/todos（SQLite，需登入）   6-6、7-4、9-5
-products.register(app)        # CRUD /api/products（SQLite）        7-4
-notifications.register(app)   # SSE  /api/notifications/stream    6-2
-auth.register(app)            # JWT  /api/auth/*                  9-6
+# 每個 api/*.py 定義一個 Blueprint（變數名統一叫 bp），這裡一行掛一組路由（3-5）
+app.register_blueprint(basics.bp)          # GET  /api/basics                 3-1
+app.register_blueprint(fruits.bp)          # CRUD /api/fruits（In-Memory）      3-4、5-8、4-3、6-1
+app.register_blueprint(todos.bp)           # CRUD /api/todos（SQLite，需登入）   6-6、7-4、9-5
+app.register_blueprint(products.bp)        # CRUD /api/products（SQLite）        7-4
+app.register_blueprint(notifications.bp)   # SSE  /api/notifications/stream    6-2
+app.register_blueprint(auth.bp)            # JWT  /api/auth/*                  9-6
 
 
 # 根路徑導向首頁：/ → static/index.html（等同 .NET 的 UseDefaultFiles）

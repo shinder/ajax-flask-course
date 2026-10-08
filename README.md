@@ -5,7 +5,7 @@ Flask 3 + 標準庫 sqlite3 + 原生 JavaScript 前端，作為課程講義《AJ
 ## 系統需求
 
 - [uv](https://docs.astral.sh/uv/)：Python 版本與套件管理工具，會依 `.python-version` 自動下載 Python 3.14，不必另外安裝 Python
-- 本專案刻意不用 ORM 與 Blueprint，只用 Flask 本體、Pydantic 與標準庫 sqlite3，讓學員看到每一步在做什麼
+- 本專案刻意不用 ORM，只用 Flask 本體（含 Blueprint）、Pydantic 與標準庫 sqlite3，每一步在做什麼都看得見
 
 建議工具（選用，對應講義附錄 D）：
 
@@ -156,7 +156,7 @@ ajax-flask-course/
 ├── schemas.py              # Pydantic DTO 與驗證規則；snake_case 與 camelCase 自動對應（3-3、8-2）
 ├── errors.py               # Problem Details 格式、parse_body()、400/401/404/500 統一處理（8-3）
 ├── auth.py                 # JWT 簽發（create_token）與驗證（login_required 裝飾器）（9-4、9-5）
-├── api/                    # 每種資源一個檔案，各自提供 register(app) 掛上路由
+├── api/                    # 每種資源一個檔案，各自定義一個 Blueprint（bp）
 │   ├── basics.py           # GET /api/basics，最簡單的端點（3-1）
 │   ├── fruits.py           # In-Memory CRUD /api/fruits，含搜尋/排序/分頁、slow、upload（3-4、5-8、4-3、6-1）
 │   ├── todos.py            # SQLite CRUD /api/todos，需登入（6-6、7-4、9-5）
@@ -194,7 +194,7 @@ ajax-flask-course/
 
 | 項目 | .NET 版 | Flask 版 | 說明 |
 | ---- | ------- | -------- | ---- |
-| 路由組織 | Controller 類別 | 模組 + `register(app)` | 不用 Blueprint，讓學員先看到 Flask 路由就是普通函式；拆檔的動機在第 6 章才出現 |
+| 路由組織 | Controller 類別 | 模組 + Blueprint | Flask 官方的分組方式，`url_prefix` 對應 Controller 的 `[Route]`；第 3 章先用單檔教，3-5 再拆 |
 | 資料庫 | EF Core | 標準庫 sqlite3 + `schema.sql` | 課程重點在 HTTP 與 AJAX，不另外教 ORM；SQL 直接寫，用 `?` 參數防注入 |
 | 驗證 | FluentValidation | Pydantic | 錯誤格式對齊 .NET 的 ValidationProblemDetails，前端 `showFieldErrors` 不用改 |
 | JSON 命名 | camelCase | camelCase | Pydantic `alias_generator=to_camel`，Python 端仍寫 snake_case |
@@ -222,7 +222,7 @@ cp .env.example .env
 uv run flask run
 ```
 
-學員 clone 專案後只需要 `uv sync`（或直接 `uv run flask run`），uv 會依 `uv.lock` 安裝完全相同的版本。
+clone 專案後只需要 `uv sync`（或直接 `uv run flask run`），uv 會依 `uv.lock` 安裝完全相同的版本。
 
 ---
 
