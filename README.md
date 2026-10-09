@@ -274,7 +274,8 @@ uv run pytest tests/test_session.py   # 只跑一個檔案
 #    沒有 --name 時 uv 會拿資料夾名稱當專案名。不加 --no-package，採用 uv 預設的套件佈局
 mkdir ajax-flask-course && cd ajax-flask-course
 uv init --name my-ajax-api --python 3.14
-#    產生：pyproject.toml（含 [build-system]）、src/my_ajax_api/__init__.py、.python-version、README.md
+#    產生：pyproject.toml（含 [build-system]）、src/my_ajax_api/__init__.py、.python-version、
+#    .gitignore、README.md；不在 git 專案底下時還會順手 git init
 
 # 2. 加入依賴（pytest 放 dev 群組，正式環境不裝）
 uv add flask pydantic pyjwt flask-cors python-dotenv
