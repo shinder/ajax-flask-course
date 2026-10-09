@@ -190,6 +190,7 @@ ajax-flask-course/
 │   ├── schemas.py          # Pydantic DTO 與驗證規則；snake_case 與 camelCase 自動對應（3-3、8-2）
 │   ├── errors.py           # Problem Details 格式、parse_body()、400/401/404/500 統一處理（8-3）
 │   ├── tokens.py           # JWT 簽發（create_token）與驗證（login_required 裝飾器）（9-4、9-5）
+│   ├── decode.py           # flask decode jwt / session：解開 token 與 Cookie 並驗簽章（9-8、10-1）
 │   ├── api/                # 每種資源一個檔案，各自定義一個 Blueprint（bp）
 │   │   ├── basics.py       # GET /api/basics，最簡單的端點（3-1）
 │   │   ├── fruits.py       # In-Memory CRUD /api/fruits，含搜尋/排序/分頁、slow、upload（3-4、5-8、4-3、6-1）
@@ -242,10 +243,23 @@ ajax-flask-course/
 
 ---
 
+## 終端機工具：flask decode
+
+把 JWT 或 session Cookie 的值貼進去，印出解開的內容、時間，並用 `.env` 的金鑰重算簽章比對（講義 9-8、10-1）：
+
+```bash
+uv run flask decode jwt eyJhbGciOi...          # Header、Payload、iat/exp、用 JWT_KEY 驗簽章
+uv run flask decode session eyJ1c2VyX2lk...    # 內容、簽發時間、用 SECRET_KEY 驗簽章
+```
+
+竄改過的 token 或 Cookie 內容照樣解得開，但最後一行會標「不正確」。實作在 `src/my_ajax_api/decode.py`，掛法和 `flask init-db` 相同。
+
+---
+
 ## 自動化測試
 
 ```bash
-uv run pytest          # 36 個測試，不到一秒
+uv run pytest          # 42 個測試，約一秒
 uv run pytest -v       # 列出每個測試的名稱
 uv run pytest tests/test_session.py   # 只跑一個檔案
 ```
@@ -259,6 +273,7 @@ uv run pytest tests/test_session.py   # 只跑一個檔案
 | `tests/test_products.py` | SQLite CRUD、camelCase 與 `createdAt`、條件式驗證、SQL 參數化 |
 | `tests/test_auth.py` | 註冊 409、登入 401 同訊息、竄改與過期的 token、todos 需登入 |
 | `tests/test_session.py` | `Set-Cookie` 屬性、登出清 Cookie、竄改 Cookie、CORS 憑證標頭 |
+| `tests/test_decode.py` | `flask decode` 指令：正確與竄改的 token 與 Cookie、壓縮過的 Cookie |
 
 兩個設計上的細節：
 

@@ -20,7 +20,7 @@ from flask import Flask
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 
-from my_ajax_api import db, errors
+from my_ajax_api import db, decode, errors
 from my_ajax_api.api import auth, basics, fruits, notifications, products, session_auth, todos
 
 # 這個檔案在 src/my_ajax_api/ 底下，往上兩層就是專案根目錄（有 pyproject.toml 的那層）
@@ -91,6 +91,7 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     db.init_app(app)          # 請求結束關連線、flask init-db 指令、啟動時建表
     errors.init_app(app)      # 400/401/404/500 統一回 JSON（8-3）
+    decode.init_app(app)      # flask decode jwt / session：解開 token 與 Cookie 的終端機工具（9-8、10-1）
 
     # 每個 api/*.py 定義一個 Blueprint（變數名統一叫 bp），這裡一行掛一組路由（3-5）
     app.register_blueprint(basics.bp)          # GET  /api/basics                 3-1
