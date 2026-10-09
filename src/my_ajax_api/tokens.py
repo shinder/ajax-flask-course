@@ -6,7 +6,7 @@ JWT 由三段組成：Header.Payload.Signature，各自 Base64Url 編碼後用 .
               任何人都能解開來看（login.html 就示範了），所以不要放密碼等敏感資料。
   Signature ：用金鑰對前兩段做 HMAC，伺服器驗證時重算一次比對，確保內容沒被竄改。
 
-金鑰（JWT_KEY）放在 .env，不進 git；app.py 啟動時檢查長度，沒設就直接失敗，比執行到登入才出錯好找問題。
+金鑰（JWT_KEY）放在 .env，不進 git；create_app() 啟動時檢查長度，沒設就直接失敗，比執行到登入才出錯好找問題。
 """
 
 import uuid
@@ -16,7 +16,7 @@ from functools import wraps
 import jwt
 from flask import current_app, g, request
 
-from errors import ProblemError
+from my_ajax_api.errors import ProblemError
 
 
 def create_token(user_id: int, username: str) -> tuple[str, datetime]:

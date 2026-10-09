@@ -1,15 +1,15 @@
 """待辦清單：SQLite CRUD，所有端點都要登入（對應講義 6-6、7-4、9-5）。
 
-每條路由都加了 @login_required：沒帶或帶無效 token 一律 401（見 auth.py 與 static/login.html）。
+每條路由都加了 @login_required：沒帶或帶無效 token 一律 401（見 tokens.py 與 static/login.html）。
 裝飾器的順序有意義：@bp.get 在最外層負責註冊路由，@login_required 包住真正的函式先檢查 token。
 """
 
 from flask import Blueprint, abort, url_for
 
-from auth import login_required
-from db import get_db
-from errors import parse_body
-from schemas import CreateTodoDto, Todo, UpdateTodoDto
+from my_ajax_api.tokens import login_required
+from my_ajax_api.db import get_db
+from my_ajax_api.errors import parse_body
+from my_ajax_api.schemas import CreateTodoDto, Todo, UpdateTodoDto
 
 bp = Blueprint("todos", __name__, url_prefix="/api/todos")
 

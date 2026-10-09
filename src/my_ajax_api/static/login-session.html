@@ -76,7 +76,7 @@ import { escapeHtml } from '/js/utils.js';
 
 // 從 :8000 開這頁是同源，fetch 預設就會帶 Cookie；
 // 從 VS Code Live Server（:5500）開則是跨來源，要指定後端網址，並加 credentials: 'include'
-// 才會帶 Cookie，而且後端的 CORS 要設 supports_credentials=True（app.py）。
+// 才會帶 Cookie，而且後端的 CORS 要設 supports_credentials=True（create_app()）。
 // 兩種情況都寫 'include' 最省事：同源時它和預設行為相同。
 const BASE_URL = location.port === '8000' ? '' : 'http://localhost:8000';
 

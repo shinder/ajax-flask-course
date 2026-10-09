@@ -6,9 +6,9 @@ SQL 一律用 ? 佔位參數，絕對不要用字串格式化把使用者輸入�
 
 from flask import Blueprint, abort, url_for
 
-from db import get_db, utc_now_iso
-from errors import parse_body
-from schemas import Product, ProductDto
+from my_ajax_api.db import get_db, utc_now_iso
+from my_ajax_api.errors import parse_body
+from my_ajax_api.schemas import Product, ProductDto
 
 bp = Blueprint("products", __name__, url_prefix="/api/products")
 

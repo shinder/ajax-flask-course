@@ -37,7 +37,7 @@ def test_get_one_and_404(client):
     assert client.get("/api/fruits/1").status_code == 200
     res = client.get("/api/fruits/999")
     assert res.status_code == 404
-    assert res.json == {"title": "找不到資源", "status": 404}   # 8-3：404 也是 JSON
+    assert res.json == {"title": "找不到資源", "status": 404}  # 8-3：404 也是 JSON
 
 
 def test_route_converter_rejects_non_int(client):
@@ -74,7 +74,10 @@ def test_create_without_json_body(client):
 
 
 def test_update_and_delete(client):
-    assert client.put("/api/fruits/1", json={"name": "紅蘋果", "price": 35}).status_code == 204
+    assert (
+        client.put("/api/fruits/1", json={"name": "紅蘋果", "price": 35}).status_code
+        == 204
+    )
     assert client.get("/api/fruits/1").json["name"] == "紅蘋果"
     assert client.delete("/api/fruits/1").status_code == 204
     assert client.get("/api/fruits/1").status_code == 404
@@ -88,38 +91,52 @@ def test_method_not_allowed_is_json(client):
 
 
 def test_upload_png(client, app):
-    data = {"file": (BytesIO(b"\x89PNG fake"), "photo.PNG", "image/png"), "note": "測試"}
-    res = client.post("/api/fruits/upload", data=data, content_type="multipart/form-data")
+    data = {
+        "file": (BytesIO(b"\x89PNG fake"), "photo.PNG", "image/png"),
+        "note": "測試",
+    }
+    res = client.post(
+        "/api/fruits/upload", data=data, content_type="multipart/form-data"
+    )
     assert res.status_code == 200
     assert res.json["url"].startswith("/uploads/") and res.json["url"].endswith(".png")
     assert res.json["note"] == "測試"
 
 
 def test_upload_rejects_html_and_mismatched_mime(client):
-    res = client.post("/api/fruits/upload",
-                      data={"file": (BytesIO(b"<script>"), "evil.html", "text/html")},
-                      content_type="multipart/form-data")
+    res = client.post(
+        "/api/fruits/upload",
+        data={"file": (BytesIO(b"<script>"), "evil.html", "text/html")},
+        content_type="multipart/form-data",
+    )
     assert res.status_code == 400
     assert "只接受" in res.json["errors"]["file"][0]
 
-    res = client.post("/api/fruits/upload",
-                      data={"file": (BytesIO(b"x"), "a.png", "image/jpeg")},
-                      content_type="multipart/form-data")
+    res = client.post(
+        "/api/fruits/upload",
+        data={"file": (BytesIO(b"x"), "a.png", "image/jpeg")},
+        content_type="multipart/form-data",
+    )
     assert res.status_code == 400
     assert "不符" in res.json["errors"]["file"][0]
 
 
 def test_upload_without_file(client):
-    res = client.post("/api/fruits/upload", data={"note": "沒檔案"},
-                      content_type="multipart/form-data")
+    res = client.post(
+        "/api/fruits/upload",
+        data={"note": "沒檔案"},
+        content_type="multipart/form-data",
+    )
     assert res.status_code == 400
     assert res.json["errors"]["file"] == ["沒有收到檔案"]
 
 
 def test_upload_too_large_returns_413(client):
     big = BytesIO(b"0" * (2 * 1024 * 1024 + 1))
-    res = client.post("/api/fruits/upload",
-                      data={"file": (big, "big.png", "image/png")},
-                      content_type="multipart/form-data")
+    res = client.post(
+        "/api/fruits/upload",
+        data={"file": (big, "big.png", "image/png")},
+        content_type="multipart/form-data",
+    )
     assert res.status_code == 413
     assert res.json["status"] == 413

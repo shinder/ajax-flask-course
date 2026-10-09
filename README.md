@@ -14,7 +14,7 @@ Flask 3 + 標準庫 sqlite3 + 原生 JavaScript 前端，作為課程講義《AJ
 | VS Code + Python 擴充套件 | 開發 IDE |
 | REST Client（VS Code 擴充套件） | 直接開 `api.http` 逐一送出請求 |
 | Postman 或 Bruno | API 測試 |
-| [Letos](https://letos.org/) | 瀏覽與編輯 SQLite 資料庫 `app.db`，免安裝，前身為 SQLiteStudio |
+| [Letos](https://letos.org/) | 瀏覽與編輯 SQLite 資料庫 `instance/app.db`，免安裝，前身為 SQLiteStudio |
 | VS Code Live Server | 在 5500 埠開前端頁面，示範 CORS |
 
 ---
@@ -85,7 +85,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 `static/` 底下 `010` 到 `270` 的編號檔案是課堂示範用的最小範例，每個只聚焦一件事，對應章節與觀察重點見講義附錄 E。其中 `270-cors.html` 要用 VS Code Live Server 從 5500 埠開才看得到 CORS 錯誤；`020`、`170`、`180`、`190` 寫的是完整網址，也能從 Live Server 開。
 
-> 第一次啟動會自動依 `schema.sql` 建立 `app.db`（SQLite），不需要手動執行指令。要清空資料重建，執行 `uv run flask init-db`。
+> 第一次啟動會自動依 `schema.sql` 建立 `instance/app.db`（SQLite），不需要手動執行指令。要清空資料重建，執行 `uv run flask init-db`。
 
 > 待辦清單（`/api/todos`）需要登入才能操作，其餘端點不需登入。`api.js` 會自動把 localStorage 的 token 放進 `Authorization` 標頭，遇 401 則清除 token。
 
@@ -98,7 +98,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ### 流程
 
 1. `POST /api/auth/register`：密碼用 Werkzeug 的 `generate_password_hash`（預設 scrypt）雜湊後存入 `users` 資料表，明文不落地。
-2. `POST /api/auth/login`：比對密碼，成功後由 `auth.py` 的 `create_token` 用 PyJWT 簽發 token，回傳 `{ token, expiresAt, username }`。
+2. `POST /api/auth/login`：比對密碼，成功後由 `tokens.py` 的 `create_token` 用 PyJWT 簽發 token，回傳 `{ token, expiresAt, username }`。
 3. 前端把 token 存進 localStorage，`api.js` 之後的每個請求都帶 `Authorization: Bearer <token>`。
 4. 加了 `@login_required` 的端點（`/api/auth/me`、`/api/todos`）由裝飾器驗證簽章、簽發者、接收者與到期時間，不通過直接回 401。
 5. 登出只是前端丟掉 token；JWT 是無狀態的，已簽發的 token 在到期前仍然有效。
@@ -126,10 +126,10 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 **確認密碼有雜湊**
 
-用 [Letos](https://letos.org/) 開 `app.db` 看 `users` 資料表，或用命令列：
+用 [Letos](https://letos.org/) 開 `instance/app.db` 看 `users` 資料表，或用命令列：
 
 ```bash
-sqlite3 app.db "select username, password_hash from users;"
+sqlite3 instance/app.db "select username, password_hash from users;"
 ```
 
 應看到 `scrypt:32768:8:1$` 開頭的字串，而非明文。
@@ -167,7 +167,7 @@ Flask 內建的 session 是「用 `SECRET_KEY` 簽章過的 Cookie」，資料�
 1. 先到 <http://localhost:8000/login.html> 註冊帳號（兩種登入共用 `users` 資料表）。
 2. 開 <http://localhost:8000/login-session.html> 登入。DevTools 的 Network 面板可以看到登入回應的 `Set-Cookie` 與之後請求的 `Cookie` 標頭；Application 面板的 Cookies 底下會多一筆 `session`；頁面上 `document.cookie` 讀出來是空的，因為 `HttpOnly`。
 3. 重新整理頁面仍是登入狀態（Cookie 還在）；關閉瀏覽器再開就要重新登入（沒設 `session.permanent`）。
-4. 用 VS Code Live Server 從 <http://127.0.0.1:5500/static/login-session.html> 開，頁面會自動改打 `http://localhost:8000`，可以觀察跨來源帶 Cookie 需要的 `credentials: 'include'` 與回應的 `Access-Control-Allow-Credentials: true`。
+4. 用 VS Code Live Server 從 <http://127.0.0.1:5500/src/my_ajax_api/static/login-session.html> 開，頁面會自動改打 `http://localhost:8000`，可以觀察跨來源帶 Cookie 需要的 `credentials: 'include'` 與回應的 `Access-Control-Allow-Credentials: true`。
 5. `api.http` 的「第 10 章」區段：REST Client 會自動記住 Cookie，依序送登入、`/me`、登出、再 `/me` 看 401。
 
 待辦清單（`/api/todos`）仍然只認 JWT，Session 版只保護 `/api/session/me` 這個示範端點，兩套機制不混用。
@@ -176,47 +176,51 @@ Flask 內建的 session 是「用 `SECRET_KEY` 簽章過的 Cookie」，資料�
 
 ## 專案結構
 
+採用 uv 預設的**套件佈局**（src layout）：`uv init` 不加 `--no-package` 產生的結構。整個後端是 `src/my_ajax_api/` 這一個套件，`uv sync` 會以可編輯模式把它裝進 `.venv`，所以 import 一律寫 `from my_ajax_api.db import get_db`，不會和 PyPI 上的同名套件撞名，測試也不需要設定搜尋路徑。講義第 2 章比較了平鋪與套件兩種佈局的優缺點。
+
 ```
 ajax-flask-course/
-├── app.py                  # 入口：建立 app、載入設定、CORS、掛上各模組（講義第 2 章）
-├── db.py                   # sqlite3 連線管理（g 物件）、init-db 指令、啟動時建表（7-2、7-3）
-├── schema.sql              # 資料表結構：products、todos、users（7-2）
-├── schemas.py              # Pydantic DTO 與驗證規則；snake_case 與 camelCase 自動對應（3-3、8-2）
-├── errors.py               # Problem Details 格式、parse_body()、400/401/404/500 統一處理（8-3）
-├── auth.py                 # JWT 簽發（create_token）與驗證（login_required 裝飾器）（9-4、9-5）
-├── api/                    # 每種資源一個檔案，各自定義一個 Blueprint（bp）
-│   ├── basics.py           # GET /api/basics，最簡單的端點（3-1）
-│   ├── fruits.py           # In-Memory CRUD /api/fruits，含搜尋/排序/分頁、slow、upload（3-4、5-8、4-3、6-1）
-│   ├── todos.py            # SQLite CRUD /api/todos，需登入（6-6、7-4、9-5）
-│   ├── products.py         # SQLite CRUD /api/products（7-4）
-│   ├── notifications.py    # SSE /api/notifications/stream（6-2）
-│   ├── auth.py             # 註冊、登入、/me（9-6）
-│   └── session_auth.py     # Session 登入、登出、/me 與 session_required 裝飾器（10-2，補充）
-├── static/                 # 前端頁面與課堂示範檔（等同 .NET 的 wwwroot）
-│   ├── index.html          # 待辦清單頁（需登入，9-7）
-│   ├── login.html          # 登入、註冊、查看 token（9-7）
-│   ├── login-session.html  # Session 登入，觀察 Set-Cookie 與 HttpOnly（10-3，補充）
-│   ├── fruits.html         # 水果清單頁（第 5 章前端範例的集合）
-│   ├── products.html       # 商品管理頁
-│   ├── upload.html         # 檔案上傳頁
-│   ├── sync-demo.html      # 同步 vs 非同步示範
-│   ├── sse-demo.html       # SSE 推送示範
-│   ├── swagger.html        # Swagger UI（讀 openapi.yaml）
-│   ├── openapi.yaml        # 手寫的 OpenAPI 規格（2-5）
-│   ├── 010-alert.html … 270-cors.html   # 課堂示範檔，見講義附錄 E
-│   ├── uploads/            # 上傳的檔案（已 gitignore）
-│   ├── js/
-│   │   ├── api.js          # fetch 封裝（5-4）
-│   │   ├── toast.js        # Toast 通知（5-6）
-│   │   └── utils.js        # escapeHtml、debounce（5-5、5-9）
-│   └── css/style.css
-├── api.http                # 所有端點的測試請求（REST Client）
-├── tests/                  # pytest：同一份 API 契約的自動化版本（uv run pytest）
-├── .flaskenv               # flask run 的設定：port 8000、debug（可進 git）
-├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY 與 SECRET_KEY（.env 不進 git）
-├── .python-version         # 3.14，uv 依此選用 Python
-├── pyproject.toml          # 專案與依賴定義（pytest 在 dev 群組、含 pytest 設定）
+├── pyproject.toml          # 專案名 my-ajax-api、依賴、[build-system]（uv 預設的套件佈局）、pytest 設定
 ├── uv.lock                 # 鎖定的套件版本，uv sync 會完全重現
+├── .python-version         # 3.14，uv 依此選用 Python
+├── src/my_ajax_api/        # 整個後端都在這個套件裡，import 一律寫 from my_ajax_api.xxx import ...
+│   ├── __init__.py         # create_app() 工廠函式：設定、CORS、掛上各模組；main() 給 uv run my-ajax-api（第 2 章）
+│   ├── db.py               # sqlite3 連線管理（g 物件）、init-db 指令、啟動時建表（7-2、7-3）
+│   ├── schema.sql          # 資料表結構：products、todos、users（7-2）
+│   ├── schemas.py          # Pydantic DTO 與驗證規則；snake_case 與 camelCase 自動對應（3-3、8-2）
+│   ├── errors.py           # Problem Details 格式、parse_body()、400/401/404/500 統一處理（8-3）
+│   ├── tokens.py           # JWT 簽發（create_token）與驗證（login_required 裝飾器）（9-4、9-5）
+│   ├── api/                # 每種資源一個檔案，各自定義一個 Blueprint（bp）
+│   │   ├── basics.py       # GET /api/basics，最簡單的端點（3-1）
+│   │   ├── fruits.py       # In-Memory CRUD /api/fruits，含搜尋/排序/分頁、slow、upload（3-4、5-8、4-3、6-1）
+│   │   ├── todos.py        # SQLite CRUD /api/todos，需登入（6-6、7-4、9-5）
+│   │   ├── products.py     # SQLite CRUD /api/products（7-4）
+│   │   ├── notifications.py# SSE /api/notifications/stream（6-2）
+│   │   ├── auth.py         # 註冊、登入、/me（9-6）
+│   │   └── session_auth.py # Session 登入、登出、/me 與 session_required 裝飾器（10-2，補充）
+│   └── static/             # 前端頁面與課堂示範檔（等同 .NET 的 wwwroot；Flask 預設的 static 位置）
+│       ├── index.html      # 待辦清單頁（需登入，9-7）
+│       ├── login.html      # 登入、註冊、查看 token（9-7）
+│       ├── login-session.html  # Session 登入，觀察 Set-Cookie 與 HttpOnly（10-3，補充）
+│       ├── fruits.html     # 水果清單頁（第 5 章前端範例的集合）
+│       ├── products.html   # 商品管理頁
+│       ├── upload.html     # 檔案上傳頁
+│       ├── sync-demo.html  # 同步 vs 非同步示範
+│       ├── sse-demo.html   # SSE 推送示範
+│       ├── swagger.html    # Swagger UI（讀 openapi.yaml）
+│       ├── openapi.yaml    # 手寫的 OpenAPI 規格（2-5）
+│       ├── 010-alert.html … 270-cors.html   # 課堂示範檔，見講義附錄 E
+│       ├── uploads/        # 上傳的檔案（已 gitignore）
+│       ├── js/
+│       │   ├── api.js      # fetch 封裝（5-4）
+│       │   ├── toast.js    # Toast 通知（5-6）
+│       │   └── utils.js    # escapeHtml、debounce（5-5、5-9）
+│       └── css/style.css
+├── instance/               # 執行期資料：app.db 在這裡（已 gitignore，第一次啟動自動建立）
+├── tests/                  # pytest：同一份 API 契約的自動化版本（uv run pytest）
+├── api.http                # 所有端點的測試請求（REST Client）
+├── .flaskenv               # flask run 的設定：FLASK_APP=my_ajax_api、port 8000、debug（可進 git）
+├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY 與 SECRET_KEY（.env 不進 git）
 ├── start.sh / start.bat / start.ps1   # 啟動腳本
 └── README.md
 ```
@@ -225,6 +229,7 @@ ajax-flask-course/
 
 | 項目 | .NET 版 | Flask 版 | 說明 |
 | ---- | ------- | -------- | ---- |
+| 專案佈局 | 單一 .csproj | uv 預設的套件佈局（`src/my_ajax_api/`） | `create_app()` 工廠函式；import 不撞名、測試免設路徑（第 2 章） |
 | 路由組織 | Controller 類別 | 模組 + Blueprint | Flask 官方的分組方式，`url_prefix` 對應 Controller 的 `[Route]`；第 3 章先用單檔教，3-5 再拆 |
 | 資料庫 | EF Core | 標準庫 sqlite3 + `schema.sql` | 課程重點在 HTTP 與 AJAX，不另外教 ORM；SQL 直接寫，用 `?` 參數防注入 |
 | 驗證 | FluentValidation | Pydantic | 錯誤格式對齊 .NET 的 ValidationProblemDetails，前端 `showFieldErrors` 不用改 |
@@ -257,29 +262,35 @@ uv run pytest tests/test_session.py   # 只跑一個檔案
 
 兩個設計上的細節：
 
-- `app.py` 在 import 時就讀 `.env` 並檢查金鑰，所以 `conftest.py` 要在 import 之前先設好測試用的環境變數，CI 沒有 `.env` 也能跑。這是 app 在模組層級建立的不便之處，正式專案常改成 `create_app()` 工廠函式（講義附錄 B）。
-- 資料庫與上傳目錄指到 pytest 的暫存資料夾，不會碰到開發用的 `app.db` 與 `static/uploads/`。水果存在模組層級的 list，每個測試前後自動還原。
+- `create_app(test_config)` 接受測試用的設定：金鑰、資料庫路徑、上傳目錄都直接傳進去，不碰 `.env`，CI 沒有 `.env` 也能跑。這就是工廠函式比模組層級的 `app` 好測的地方。
+- 資料庫與上傳目錄指到 pytest 的暫存資料夾，不會碰到開發用的 `instance/app.db` 與 `static/uploads/`。水果存在模組層級的 list，每個測試前後自動還原。
 
 ---
 
 ## 從零建立專案的指令流程
 
 ```bash
-# 1. 安裝 Python 3.14 並初始化專案（--no-package：平面配置，不產生 src/ 與打包設定）
-uv python install 3.14
-uv init --no-package --python 3.14
+# 1. 建立資料夾並初始化專案。--name 指定專案名（與套件名 my_ajax_api），
+#    沒有 --name 時 uv 會拿資料夾名稱當專案名。不加 --no-package，採用 uv 預設的套件佈局
+mkdir ajax-flask-course && cd ajax-flask-course
+uv init --name my-ajax-api --python 3.14
+#    產生：pyproject.toml（含 [build-system]）、src/my_ajax_api/__init__.py、.python-version、README.md
 
-# 2. 加入依賴
+# 2. 加入依賴（pytest 放 dev 群組，正式環境不裝）
 uv add flask pydantic pyjwt flask-cors python-dotenv
+uv add --dev pytest
 
-# 3. 設定 JWT_KEY 與 SECRET_KEY（見上方）
+# 3. 把 src/my_ajax_api/__init__.py 改成 create_app()，新增 .flaskenv（FLASK_APP=my_ajax_api）
+
+# 4. 設定 JWT_KEY 與 SECRET_KEY（見上方）
 cp .env.example .env
 
-# 4. 執行
-uv run flask run
+# 5. 執行（兩種都可以）
+uv run flask run          # 讀 .flaskenv，Flask 自動呼叫 create_app()
+uv run my-ajax-api        # pyproject.toml 的 [project.scripts]，呼叫 main()
 ```
 
-clone 專案後只需要 `uv sync`（或直接 `uv run flask run`），uv 會依 `uv.lock` 安裝完全相同的版本。
+clone 專案後只需要 `uv sync`（或直接 `uv run flask run`），uv 會依 `uv.lock` 安裝完全相同的版本，並把 `src/my_ajax_api` 以可編輯模式裝進 `.venv`。
 
 ---
 

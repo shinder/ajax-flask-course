@@ -17,13 +17,14 @@ __pycache__/
 # 作業系統
 .DS_Store
 
-# SQLite 資料庫（啟動時自動建立）
+# 執行期資料：SQLite 資料庫放 instance/（啟動時自動建立）
+instance/
 *.db
 *.db-shm
 *.db-wal
 
 # 6-1 檔案上傳的測試檔，不進版控
-static/uploads/
+src/my_ajax_api/static/uploads/
 
 # 編輯器
 # VS Code：只保留 settings.json（指定 .venv 直譯器），其他個人設定不進版控

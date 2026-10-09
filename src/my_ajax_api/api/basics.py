@@ -1,7 +1,7 @@
 """最簡單的 API 端點（對應講義 3-1）。
 
 每個 api/*.py 都定義一個 Blueprint（藍圖）：先把路由掛在藍圖上，
-app.py 再用 app.register_blueprint() 一次把整組路由掛進 app。
+create_app() 再用 app.register_blueprint() 一次把整組路由掛進 app。
 url_prefix 是這組路由共用的前綴，底下的路徑都從這裡接下去。
 """
 

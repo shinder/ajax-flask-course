@@ -9,10 +9,10 @@ import sqlite3
 from flask import Blueprint, g
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from auth import create_token, login_required
-from db import get_db, utc_now_iso
-from errors import ProblemError, parse_body
-from schemas import LoginDto, RegisterDto
+from my_ajax_api.tokens import create_token, login_required
+from my_ajax_api.db import get_db, utc_now_iso
+from my_ajax_api.errors import ProblemError, parse_body
+from my_ajax_api.schemas import LoginDto, RegisterDto
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 

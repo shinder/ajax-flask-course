@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, Response, stream_with_context
 
-from api import fruits
+from my_ajax_api.api import fruits
 
 bp = Blueprint("notifications", __name__, url_prefix="/api/notifications")
 

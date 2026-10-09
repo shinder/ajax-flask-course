@@ -4,36 +4,29 @@
 每個測試對應 api.http 裡的一條請求，是「API 契約的程式碼版」。
 執行：uv run pytest
 
-app.py 在 import 時就會讀 .env 並檢查金鑰，所以環境變數要在 import 之前設好；
-這也是 app 在模組層級建立的不便之處，正式專案常改成 create_app() 工廠函式（講義附錄 B）。
+create_app() 接受 test_config，所以測試用的金鑰、資料庫路徑直接傳進去，
+不碰 .env 也不碰開發用的 instance/app.db。這就是工廠函式比模組層級的 app 好測的地方。
 """
-
-import os
 
 import pytest
 
-# 必須在 import app 之前：固定的測試金鑰，和 .env 無關，CI 環境沒有 .env 也能跑
-os.environ["JWT_KEY"] = "test-jwt-key-" + "x" * 32
-os.environ["SECRET_KEY"] = "test-secret-key-" + "y" * 32
-os.environ["JWT_EXPIRE_MINUTES"] = "60"
-
-from app import app as flask_app  # noqa: E402
-from api import fruits as fruits_module  # noqa: E402
-from db import init_db  # noqa: E402
+from my_ajax_api import create_app
+from my_ajax_api.api import fruits as fruits_module
 
 
 @pytest.fixture(scope="session")
 def app(tmp_path_factory):
-    """整個測試過程共用一個 app，但資料庫與上傳目錄指到暫存資料夾，不碰開發用的 app.db。"""
+    """整個測試過程共用一個 app，資料庫與上傳目錄指到暫存資料夾。"""
     tmp = tmp_path_factory.mktemp("data")
-    flask_app.config.update(
-        TESTING=True,
-        DATABASE=str(tmp / "test.db"),
-        UPLOAD_DIR=str(tmp / "uploads"),
-    )
-    with flask_app.app_context():
-        init_db()
-    return flask_app
+    return create_app({
+        "TESTING": True,
+        "DATABASE": str(tmp / "test.db"),
+        "UPLOAD_DIR": str(tmp / "uploads"),
+        # 固定的測試金鑰，和 .env 無關，CI 環境沒有 .env 也能跑
+        "JWT_KEY": "test-jwt-key-" + "x" * 32,
+        "SECRET_KEY": "test-secret-key-" + "y" * 32,
+        "JWT_EXPIRE_MINUTES": 60,
+    })
 
 
 @pytest.fixture

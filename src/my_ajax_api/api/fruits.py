@@ -12,8 +12,8 @@ from pathlib import Path
 
 from flask import Blueprint, abort, current_app, request, url_for
 
-from errors import ProblemError, parse_body
-from schemas import FruitDto
+from my_ajax_api.errors import ProblemError, parse_body
+from my_ajax_api.schemas import FruitDto
 
 # 藍圖名稱 "fruits" 也是端點的命名空間：url_for("fruits.get_fruit") 才找得到底下的函式
 bp = Blueprint("fruits", __name__, url_prefix="/api/fruits")
@@ -152,7 +152,7 @@ def delete_fruit(fruit_id: int):
 # 對應講義 6-1。檔案在 request.files、其他欄位在 request.form。
 # 上傳的檔案會放進 static/uploads 讓瀏覽器直接開，所以「只收圖片」是安全底線：
 # 若放行 .html 或 .svg，任何人都能上傳一個含 script 的檔案，再用同源的網址讓別人開啟（儲存型 XSS）。
-# 超過 MAX_CONTENT_LENGTH（app.py 設 2 MB）時 Flask 會在讀取表單前就回 413。
+# 超過 MAX_CONTENT_LENGTH（create_app() 設 2 MB）時 Flask 會在讀取表單前就回 413。
 @bp.post("/upload")
 def upload_fruit_image():
     file = request.files.get("file")
