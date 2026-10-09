@@ -1,5 +1,5 @@
 # OpenAPI 3.1 規格（對應講義 2-5）。/swagger 頁面會讀這個檔案畫出 Swagger UI。
-# Flask 不像 ASP.NET Core 會自動產生，這份是手寫的；優點是規格本身看得見，也能直接當文件。
+# Flask 不會自動產生，這份是手寫的；優點是規格本身看得見，也能直接當文件。
 openapi: 3.1.0
 info:
   title: Flask AJAX API

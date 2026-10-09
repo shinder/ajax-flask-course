@@ -60,7 +60,7 @@ def init_app(app: Flask):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
 
-    # 等同 .NET 範例的 db.Database.EnsureCreated()：第一次啟動自動建表，不必手動跑指令。
+    # 第一次啟動自動建表，不必手動跑指令。
     # schema.sql 用了 IF NOT EXISTS，所以每次啟動執行也安全。
     with app.app_context():
         init_db()

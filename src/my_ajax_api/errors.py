@@ -83,7 +83,7 @@ def parse_body[T: BaseModel](model: type[T]) -> T:
     """讀取請求本文的 JSON 並用 Pydantic 模型驗證；失敗就丟出 400。
 
     用法：dto = parse_body(CreateFruitDto)
-    等同於 .NET [ApiController] 的 Model Binding + 自動驗證，只是在 Flask 要自己呼叫一次。
+    許多框架會自動做「解析請求本文並驗證」這件事，Flask 要自己呼叫一次。
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):

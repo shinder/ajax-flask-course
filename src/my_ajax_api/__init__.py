@@ -32,7 +32,7 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     # static_url_path="" 讓套件裡 static/ 底下的檔案直接對應到網站根目錄：
     #   static/css/style.css → /css/style.css、static/020-xhr.html → /020-xhr.html
-    # 效果等同 .NET 的 wwwroot + UseStaticFiles()。static_folder 預設就是套件旁的 static/
+    # static_folder 預設就是套件旁的 static/
     # instance_path：Flask 慣例的「執行期資料」資料夾，放資料庫這類不進 git 的檔案
     app = Flask(__name__, static_url_path="", instance_path=str(PROJECT_ROOT / "instance"))
 
@@ -101,12 +101,12 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.register_blueprint(auth.bp)            # JWT  /api/auth/*                  9-6
     app.register_blueprint(session_auth.bp)    # Session /api/session/*            10-2（補充）
 
-    # 根路徑導向首頁：/ → static/index.html（等同 .NET 的 UseDefaultFiles）
+    # 根路徑導向首頁：/ → static/index.html
     @app.get("/")
     def index():
         return app.send_static_file("index.html")
 
-    # API 文件（2-5）：Swagger UI 讀 static/openapi.yaml。規格是手寫的，不像 ASP.NET Core 會自動產生
+    # API 文件（2-5）：Swagger UI 讀 static/openapi.yaml。規格是手寫的，Flask 不會自動產生
     @app.get("/swagger")
     def swagger():
         return app.send_static_file("swagger.html")

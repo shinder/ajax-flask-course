@@ -58,7 +58,7 @@ def _decode_token(token: str) -> dict:
 def login_required(view):
     """路由裝飾器：沒帶 token、token 過期或簽章不符，一律回 401，不會進到路由本體。
 
-    等同 .NET 的 [Authorize]。驗證通過後把使用者資訊放進 g.user，路由裡用 g.user["id"] 取得。
+    驗證通過後把使用者資訊放進 g.user，路由裡用 g.user["id"] 取得。
     """
 
     @wraps(view)
