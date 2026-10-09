@@ -89,7 +89,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 > 待辦清單（`/api/todos`）需要登入才能操作，其餘端點不需登入。`api.js` 會自動把 localStorage 的 token 放進 `Authorization` 標頭，遇 401 則清除 token。
 
-> `api.http` 收錄了所有端點的測試請求，用 VS Code 的 REST Client 擴充套件開啟即可逐一送出（講義 1-6）。
+> `api.http` 收錄了所有端點的測試請求，用 VS Code 的 REST Client 擴充套件開啟即可逐一送出（講義 1-6）。`tests/` 是同一份契約的自動化版本，`uv run pytest` 幾秒內驗完所有端點。
 
 ---
 
@@ -211,10 +211,11 @@ ajax-flask-course/
 │   │   └── utils.js        # escapeHtml、debounce（5-5、5-9）
 │   └── css/style.css
 ├── api.http                # 所有端點的測試請求（REST Client）
+├── tests/                  # pytest：同一份 API 契約的自動化版本（uv run pytest）
 ├── .flaskenv               # flask run 的設定：port 8000、debug（可進 git）
 ├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY 與 SECRET_KEY（.env 不進 git）
 ├── .python-version         # 3.14，uv 依此選用 Python
-├── pyproject.toml          # 專案與依賴定義
+├── pyproject.toml          # 專案與依賴定義（pytest 在 dev 群組、含 pytest 設定）
 ├── uv.lock                 # 鎖定的套件版本，uv sync 會完全重現
 ├── start.sh / start.bat / start.ps1   # 啟動腳本
 └── README.md
@@ -233,6 +234,31 @@ ajax-flask-course/
 | 密碼雜湊 | bcrypt | Werkzeug scrypt | 都是「每次雜湊結果不同、無法還原」的做法 |
 | API 文件 | Swashbuckle 自動產生 | 手寫 `openapi.yaml` + Swagger UI | Flask 不會自動產生，手寫反而能看到規格長什麼樣 |
 | 請求超過 2 MB | 400 | 413 | Flask 的 `MAX_CONTENT_LENGTH` 直接回 413，是更精確的狀態碼 |
+
+---
+
+## 自動化測試
+
+```bash
+uv run pytest          # 36 個測試，不到一秒
+uv run pytest -v       # 列出每個測試的名稱
+uv run pytest tests/test_session.py   # 只跑一個檔案
+```
+
+用 Flask 內建的 test client 直接呼叫路由，不啟動伺服器、不開瀏覽器。每個測試對應 `api.http` 裡的一條請求，驗的是 API 契約：狀態碼、`Location` 標頭、400 的 `errors` 格式、camelCase 輸出、JWT 與 Session 的登入流程、CORS 憑證標頭。
+
+| 檔案 | 涵蓋 |
+| ---- | ---- |
+| `tests/conftest.py` | 測試金鑰、暫存資料庫與上傳目錄、重設水果清單、已登入的 fixture |
+| `tests/test_fruits.py` | In-Memory CRUD、搜尋排序分頁、404 與 405 的 JSON 格式、上傳白名單與 413 |
+| `tests/test_products.py` | SQLite CRUD、camelCase 與 `createdAt`、條件式驗證、SQL 參數化 |
+| `tests/test_auth.py` | 註冊 409、登入 401 同訊息、竄改與過期的 token、todos 需登入 |
+| `tests/test_session.py` | `Set-Cookie` 屬性、登出清 Cookie、竄改 Cookie、CORS 憑證標頭 |
+
+兩個設計上的細節：
+
+- `app.py` 在 import 時就讀 `.env` 並檢查金鑰，所以 `conftest.py` 要在 import 之前先設好測試用的環境變數，CI 沒有 `.env` 也能跑。這是 app 在模組層級建立的不便之處，正式專案常改成 `create_app()` 工廠函式（講義附錄 B）。
+- 資料庫與上傳目錄指到 pytest 的暫存資料夾，不會碰到開發用的 `app.db` 與 `static/uploads/`。水果存在模組層級的 list，每個測試前後自動還原。
 
 ---
 
