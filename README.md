@@ -17,7 +17,7 @@ Flask 3 + 標準庫 sqlite3 + 原生 JavaScript 前端，作為課程講義《AJ
 | [Letos](https://letos.org/) | 瀏覽與編輯 SQLite 資料庫 `instance/app.db`，免安裝，前身為 SQLiteStudio |
 | VS Code Live Server | 在 5500 埠開前端頁面，示範 CORS |
 
-上表的 VS Code 擴充套件（含 Pylance、Ruff 與 OpenAPI 編輯器）列在 `.vscode/extensions.json`，用 VS Code 開啟專案時會提示一鍵安裝。
+上表的 VS Code 擴充套件（含 Pylance、Ruff、OpenAPI 編輯器與 Code Spell Checker）列在 `.vscode/extensions.json`，用 VS Code 開啟專案時會提示一鍵安裝。Code Spell Checker 的專案字典在 `cspell.json`，套件名與 API 名稱已列入，JWT 片段會自動忽略。
 
 ---
 

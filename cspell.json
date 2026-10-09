@@ -1,0 +1,39 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "appcontext",
+    "autouse",
+    "conftest",
+    "creds",
+    "dotenv",
+    "executescript",
+    "flaskenv",
+    "lastrowid",
+    "Letos",
+    "myimg",
+    "pydantic",
+    "pyjwt",
+    "pyproject",
+    "pytest",
+    "Shinder",
+    "Swashbuckle",
+    "testpaths",
+    "urlsafe",
+    "venv",
+    "webp",
+    "Werkzeug",
+    "wwwroot"
+  ],
+  "ignoreRegExpList": [
+    "/eyJ[A-Za-z0-9_-]+/",
+    "/[A-Za-z0-9_-]{20,}/"
+  ],
+  "ignorePaths": [
+    ".venv",
+    "uv.lock",
+    "instance",
+    "docs",
+    "**/static/uploads"
+  ]
+}
