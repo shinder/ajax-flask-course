@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "humao.rest-client",
+    "ritwickdey.liveserver",
+    "42crunch.vscode-openapi",
+    "streetsidesoftware.code-spell-checker",
+    "stuart.unique-window-colors"
+  ]
+}

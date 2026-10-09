@@ -27,9 +27,10 @@ instance/
 src/my_ajax_api/static/uploads/
 
 # 編輯器
-# VS Code：只保留 settings.json（指定 .venv 直譯器），其他個人設定不進版控
+# VS Code：只保留 settings.json（指定 .venv 直譯器）與 extensions.json（推薦外掛），其他個人設定不進版控
 .vscode/*
 !.vscode/settings.json
+!.vscode/extensions.json
 
 # Playwright MCP 的暫存輸出
 .playwright-mcp/
