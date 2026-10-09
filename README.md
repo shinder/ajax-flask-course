@@ -21,7 +21,7 @@ Flask 3 + 標準庫 sqlite3 + 原生 JavaScript 前端，作為課程講義《AJ
 
 ## 啟動方式
 
-### 1. 設定 JWT 簽章金鑰（只需一次）
+### 1. 設定簽章金鑰（只需一次）
 
 金鑰不放在程式碼裡（會進 git），改放在專案根目錄的 `.env`，這個檔案已在 `.gitignore`。
 
@@ -29,7 +29,7 @@ Flask 3 + 標準庫 sqlite3 + 原生 JavaScript 前端，作為課程講義《AJ
 cp .env.example .env          # Windows：copy .env.example .env
 ```
 
-打開 `.env`，把 `JWT_KEY=` 後面填上至少 32 個字元的隨機字串。產生方式擇一：
+打開 `.env`，把 `JWT_KEY=`（JWT 簽章）與 `SECRET_KEY=`（Flask session 簽章）後面各填上一組至少 32 個字元的隨機字串，兩組不要相同。產生方式擇一，執行兩次：
 
 ```bash
 # macOS / Linux
@@ -39,7 +39,7 @@ openssl rand -base64 48
 uv run python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-沒設定就啟動會直接報錯「JWT_KEY 未設定或太短」，錯誤訊息裡會附一組可直接複製的隨機字串。
+沒設定就啟動會直接報錯「JWT_KEY 未設定或太短」或「SECRET_KEY 未設定或太短」，錯誤訊息裡會附一組可直接複製的隨機字串。
 
 ### 2. 啟動開發伺服器
 
@@ -80,6 +80,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | 同步 vs 非同步 XHR | <http://localhost:8000/sync-demo.html> | 4-3 |
 | SSE 伺服器推送 | <http://localhost:8000/sse-demo.html> | 6-2 |
 | JWT 登入、註冊、查看 token | <http://localhost:8000/login.html> | 第 9 章 |
+| Session 登入：Cookie 自動攜帶、HttpOnly | <http://localhost:8000/login-session.html> | 第 10 章（補充） |
 | Swagger API 文件 | <http://localhost:8000/swagger> | 2-5 |
 
 `static/` 底下 `010` 到 `270` 的編號檔案是課堂示範用的最小範例，每個只聚焦一件事，對應章節與觀察重點見講義附錄 E。其中 `270-cors.html` 要用 VS Code Live Server 從 5500 埠開才看得到 CORS 錯誤；`020`、`170`、`180`、`190` 寫的是完整網址，也能從 Live Server 開。
@@ -146,6 +147,33 @@ sqlite3 app.db "select username, password_hash from users;"
 
 ---
 
+## Session 登入（補充）
+
+同一批帳號的另一種登入方式，用來和 JWT 對照。差別只在登入狀態怎麼運送：
+
+| | JWT（第 9 章） | Session（第 10 章） |
+| ---- | ---- | ---- |
+| 登入成功後 | 回應 Body 給 token，前端存進 localStorage | 回應標頭 `Set-Cookie`，瀏覽器自己收好 |
+| 之後的請求 | `api.js` 放進 `Authorization: Bearer` 標頭 | 瀏覽器自動帶 `Cookie` 標頭，前端不用做事 |
+| 跨來源（Live Server） | 帶標頭即可 | `fetch` 要加 `credentials: 'include'`，後端 CORS 要 `supports_credentials=True` |
+| JavaScript 碰得到嗎 | 可以（所以怕 XSS） | `HttpOnly`，碰不到（但要防 CSRF，靠 `SameSite=Lax`） |
+| 登出 | 前端丟掉 token | 要呼叫 `POST /api/session/logout`，由伺服器清 Cookie |
+| 金鑰 | `.env` 的 `JWT_KEY` | `.env` 的 `SECRET_KEY` |
+
+Flask 內建的 session 是「用 `SECRET_KEY` 簽章過的 Cookie」，資料存在瀏覽器而不是伺服器，所以和 JWT 一樣可以解開來看但改不了，也一樣沒辦法在伺服器端立即註銷。要存到伺服器端可另外裝 Flask-Session，程式碼不用改。
+
+### 測試方式
+
+1. 先到 <http://localhost:8000/login.html> 註冊帳號（兩種登入共用 `users` 資料表）。
+2. 開 <http://localhost:8000/login-session.html> 登入。DevTools 的 Network 面板可以看到登入回應的 `Set-Cookie` 與之後請求的 `Cookie` 標頭；Application 面板的 Cookies 底下會多一筆 `session`；頁面上 `document.cookie` 讀出來是空的，因為 `HttpOnly`。
+3. 重新整理頁面仍是登入狀態（Cookie 還在）；關閉瀏覽器再開就要重新登入（沒設 `session.permanent`）。
+4. 用 VS Code Live Server 從 <http://127.0.0.1:5500/static/login-session.html> 開，頁面會自動改打 `http://localhost:8000`，可以觀察跨來源帶 Cookie 需要的 `credentials: 'include'` 與回應的 `Access-Control-Allow-Credentials: true`。
+5. `api.http` 的「第 10 章」區段：REST Client 會自動記住 Cookie，依序送登入、`/me`、登出、再 `/me` 看 401。
+
+待辦清單（`/api/todos`）仍然只認 JWT，Session 版只保護 `/api/session/me` 這個示範端點，兩套機制不混用。
+
+---
+
 ## 專案結構
 
 ```
@@ -162,10 +190,12 @@ ajax-flask-course/
 │   ├── todos.py            # SQLite CRUD /api/todos，需登入（6-6、7-4、9-5）
 │   ├── products.py         # SQLite CRUD /api/products（7-4）
 │   ├── notifications.py    # SSE /api/notifications/stream（6-2）
-│   └── auth.py             # 註冊、登入、/me（9-6）
+│   ├── auth.py             # 註冊、登入、/me（9-6）
+│   └── session_auth.py     # Session 登入、登出、/me 與 session_required 裝飾器（10-2，補充）
 ├── static/                 # 前端頁面與課堂示範檔（等同 .NET 的 wwwroot）
 │   ├── index.html          # 待辦清單頁（需登入，9-7）
 │   ├── login.html          # 登入、註冊、查看 token（9-7）
+│   ├── login-session.html  # Session 登入，觀察 Set-Cookie 與 HttpOnly（10-3，補充）
 │   ├── fruits.html         # 水果清單頁（第 5 章前端範例的集合）
 │   ├── products.html       # 商品管理頁
 │   ├── upload.html         # 檔案上傳頁
@@ -182,7 +212,7 @@ ajax-flask-course/
 │   └── css/style.css
 ├── api.http                # 所有端點的測試請求（REST Client）
 ├── .flaskenv               # flask run 的設定：port 8000、debug（可進 git）
-├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY（.env 不進 git）
+├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY 與 SECRET_KEY（.env 不進 git）
 ├── .python-version         # 3.14，uv 依此選用 Python
 ├── pyproject.toml          # 專案與依賴定義
 ├── uv.lock                 # 鎖定的套件版本，uv sync 會完全重現
@@ -199,6 +229,7 @@ ajax-flask-course/
 | 驗證 | FluentValidation | Pydantic | 錯誤格式對齊 .NET 的 ValidationProblemDetails，前端 `showFieldErrors` 不用改 |
 | JSON 命名 | camelCase | camelCase | Pydantic `alias_generator=to_camel`，Python 端仍寫 snake_case |
 | JWT | JwtBearer 中介軟體 | PyJWT + 裝飾器 | `@login_required` 等同 `[Authorize]` |
+| Session 登入 | Cookie 驗證（`AddCookie`） | Flask 內建 `session` | 補充章節；Flask 的 session 是簽章過的 Cookie，存在用戶端 |
 | 密碼雜湊 | bcrypt | Werkzeug scrypt | 都是「每次雜湊結果不同、無法還原」的做法 |
 | API 文件 | Swashbuckle 自動產生 | 手寫 `openapi.yaml` + Swagger UI | Flask 不會自動產生，手寫反而能看到規格長什麼樣 |
 | 請求超過 2 MB | 400 | 413 | Flask 的 `MAX_CONTENT_LENGTH` 直接回 413，是更精確的狀態碼 |
@@ -215,7 +246,7 @@ uv init --no-package --python 3.14
 # 2. 加入依賴
 uv add flask pydantic pyjwt flask-cors python-dotenv
 
-# 3. 設定 JWT 金鑰（見上方）
+# 3. 設定 JWT_KEY 與 SECRET_KEY（見上方）
 cp .env.example .env
 
 # 4. 執行
@@ -257,6 +288,14 @@ clone 專案後只需要 `uv sync`（或直接 `uv run flask run`），uv 會依
 | POST | `/api/auth/register` | 註冊（帳號 3 到 20 字英數底線、密碼 6 到 64 字）；重複回 409 | 9-3、9-6 |
 | POST | `/api/auth/login` | 登入，回傳 `{ token, expiresAt, username }`；失敗回 401 | 9-4、9-6 |
 | GET | `/api/auth/me` | 需帶 token，回傳 `{ id, username }` | 9-5 |
+
+### Session（Cookie，補充）
+
+| 方法 | 路徑 | 說明 | 講義 |
+|------|------|------|------|
+| POST | `/api/session/login` | 登入，回應帶 `Set-Cookie`；失敗回 401。帳號與 `/api/auth/register` 共用 | 10-2 |
+| POST | `/api/session/logout` | 登出，回 204 並清掉 Cookie | 10-2 |
+| GET | `/api/session/me` | Cookie 有效才回 `{ id, username }`，否則 401 | 10-2 |
 
 ### Todos（SQLite，需帶 token）
 

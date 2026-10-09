@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <title>待辦清單 — Flask AJAX API</title>
     <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        .auth-bar { display: flex; align-items: center; gap: 1rem; }
+        .auth-bar[hidden] { display: none; }
+        .auth-bar .hint { flex: 1; }
+    </style>
 </head>
 <body>
 <nav>
@@ -13,7 +18,8 @@
     <a href="/upload.html">檔案上傳</a>
     <a href="/sync-demo.html">同步 vs 非同步</a>
     <a href="/sse-demo.html">SSE 推送</a>
-    <a href="/login.html">登入</a>
+    <a href="/login.html">JWT 登入</a>
+    <a href="/login-session.html">Session 登入</a>
 </nav>
 <main>
     <h1>待辦清單</h1>
@@ -22,8 +28,9 @@
     <section id="authHint" hidden>
         <p class="hint">待辦清單需要登入才能使用，請先到 <a href="/login.html">登入頁</a> 註冊並登入。</p>
     </section>
-    <section id="authBar" hidden style="display:flex;align-items:center;gap:1rem">
-        <span class="hint" id="whoami" style="flex:1"></span>
+    <!-- 不能用 style="display:flex"：行內樣式的優先度高於 hidden 屬性，會讓 hidden 失效 -->
+    <section id="authBar" class="auth-bar" hidden>
+        <span class="hint" id="whoami"></span>
         <button id="btnLogout" class="btn-secondary">登出</button>
     </section>
 

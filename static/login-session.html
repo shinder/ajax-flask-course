@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <title>Session 登入 — Flask AJAX API</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        .field { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .field-error { color: #dc2626; font-size: .8rem; min-height: 1.1rem; margin-top: .25rem; }
+        input.invalid { border-color: #dc2626; }
+        input[type="password"] {
+            flex: 1; min-width: 0; padding: .5rem .75rem;
+            border: 1px solid #d1d5db; border-radius: .375rem; font-size: 1rem;
+        }
+        form { margin-bottom: 0; }
+        #status { display: flex; align-items: center; gap: 1rem; }
+        #status[hidden] { display: none; }   /* display: flex 的優先度高於 hidden 屬性，要補這條 */
+        #status strong { flex: 1; }
+        pre { background: #f3f4f6; padding: .75rem; border-radius: .375rem; font-size: .8rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/index.html">待辦清單</a>
+    <a href="/fruits.html">水果清單</a>
+    <a href="/products.html">商品管理</a>
+    <a href="/upload.html">檔案上傳</a>
+    <a href="/sync-demo.html">同步 vs 非同步</a>
+    <a href="/sse-demo.html">SSE 推送</a>
+    <a href="/login.html">JWT 登入</a>
+    <a href="/login-session.html">Session 登入</a>
+</nav>
+<main>
+    <h1>Session 登入</h1>
+    <p class="hint">
+        和 <a href="/login.html">JWT 登入</a>用同一批帳號（請先到那邊註冊），差別在登入狀態怎麼運送：
+        這裡由伺服器透過 <code>Set-Cookie</code> 交給瀏覽器，之後每個請求瀏覽器自動帶上，前端沒有東西要存。
+    </p>
+
+    <!-- 目前登入狀態：由 GET /api/session/me 決定，Cookie 無效或不存在時回 401 -->
+    <section id="status" hidden>
+        <strong id="whoami"></strong>
+        <button id="btnLogout" class="btn-secondary">登出</button>
+    </section>
+
+    <section>
+        <h2>登入</h2>
+        <!-- 故意不加 required，讓後端的驗證錯誤（400）有機會回到欄位上 -->
+        <form id="loginForm" novalidate>
+            <div class="field">
+                <input type="text" name="username" placeholder="帳號" autocomplete="username" />
+                <small class="field-error" data-for="username"></small>
+            </div>
+            <div class="field">
+                <input type="password" name="password" placeholder="密碼" autocomplete="current-password" />
+                <small class="field-error" data-for="password"></small>
+            </div>
+            <button type="submit" class="btn-primary">登入</button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Cookie 在哪裡？</h2>
+        <p class="hint">
+            登入後打開 DevTools 的 Application（Chrome）或 Storage（Firefox）面板，Cookies 底下會多一筆 <code>session</code>。
+            Network 面板裡登入回應的 <code>Set-Cookie</code> 標頭與之後請求的 <code>Cookie</code> 標頭也看得到。
+            但下面用 <code>document.cookie</code> 讀出來的結果是空的，因為伺服器設了 <code>HttpOnly</code>，
+            JavaScript 碰不到它，就算頁面被注入惡意程式碼也偷不走。
+        </p>
+        <pre id="cookieView"></pre>
+    </section>
+</main>
+<script type="module">
+import { showToast } from '/js/toast.js';
+import { escapeHtml } from '/js/utils.js';
+
+// 從 :8000 開這頁是同源，fetch 預設就會帶 Cookie；
+// 從 VS Code Live Server（:5500）開則是跨來源，要指定後端網址，並加 credentials: 'include'
+// 才會帶 Cookie，而且後端的 CORS 要設 supports_credentials=True（app.py）。
+// 兩種情況都寫 'include' 最省事：同源時它和預設行為相同。
+const BASE_URL = location.port === '8000' ? '' : 'http://localhost:8000';
+
+// 這頁不用 api.js：那支會帶 localStorage 的 token，這裡要看的是 Cookie 自己跑
+async function sessionFetch(path, options = {}) {
+    const res = await fetch(`${BASE_URL}${path}`, {
+        credentials: 'include',
+        ...options,
+        headers: { 'Content-Type': 'application/json', ...options.headers }
+    });
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const err = new Error(errBody.title ?? `HTTP ${res.status}`);
+        err.status = res.status;
+        err.data = errBody;
+        throw err;
+    }
+    return res.status === 204 ? null : res.json();
+}
+
+const statusEl = document.getElementById('status');
+const whoamiEl = document.getElementById('whoami');
+const cookieView = document.getElementById('cookieView');
+
+// 把後端 400 的 errors 顯示到對應欄位旁（與 login.html 相同的作法）
+function showFieldErrors(form, errors = {}) {
+    form.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    form.querySelectorAll('input').forEach(el => el.classList.remove('invalid'));
+    for (const [key, messages] of Object.entries(errors)) {
+        const field = key.toLowerCase();
+        const errorEl = form.querySelector(`.field-error[data-for="${field}"]`);
+        const inputEl = form.querySelector(`input[name="${field}"]`);
+        if (errorEl) errorEl.textContent = messages.join('、');
+        if (inputEl) inputEl.classList.add('invalid');
+    }
+}
+
+function showCookie() {
+    // HttpOnly 的 Cookie 不會出現在 document.cookie，所以這裡幾乎永遠是空字串
+    cookieView.textContent = `document.cookie = ${JSON.stringify(document.cookie)}`;
+}
+
+async function refreshStatus() {
+    showCookie();
+    try {
+        // 沒有 token 可以先檢查，直接問伺服器：Cookie 有效才會回 200
+        const me = await sessionFetch('/api/session/me');
+        whoamiEl.innerHTML = `目前登入：${escapeHtml(me.username)}（id = ${me.id}）`;
+        statusEl.hidden = false;
+    } catch (err) {
+        statusEl.hidden = true;
+        if (err.status !== 401) showToast(`無法確認登入狀態：${err.message}`, 'error');
+    }
+}
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    showFieldErrors(form);
+    try {
+        const me = await sessionFetch('/api/session/login', {
+            method: 'POST',
+            body: JSON.stringify({ username: form.username.value, password: form.password.value })
+        });
+        // 和 JWT 版的差別就在這裡：沒有 localStorage.setItem，Cookie 已經由瀏覽器收好了
+        form.reset();
+        showToast(`歡迎回來，${me.username}`, 'success');
+        await refreshStatus();
+    } catch (err) {
+        if (err.status === 400) showFieldErrors(form, err.data.errors);
+        else showToast(err.message, 'error');   // 401：帳號或密碼錯誤
+    }
+});
+
+// 登出要呼叫伺服器：前端刪不掉 HttpOnly 的 Cookie，得由伺服器回 Set-Cookie 把它清掉
+document.getElementById('btnLogout').addEventListener('click', async () => {
+    try {
+        await sessionFetch('/api/session/logout', { method: 'POST' });
+        showToast('已登出', 'info');
+    } catch (err) {
+        showToast(`登出失敗：${err.message}`, 'error');
+    }
+    await refreshStatus();
+});
+
+refreshStatus();
+</script>
+</body>
+</html>

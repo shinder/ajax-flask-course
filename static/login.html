@@ -14,6 +14,7 @@
         }
         form { margin-bottom: 0; }
         #status { display: flex; align-items: center; gap: 1rem; }
+        #status[hidden] { display: none; }   /* display: flex 的優先度高於 hidden 屬性，要補這條 */
         #status strong { flex: 1; }
         pre { background: #f3f4f6; padding: .75rem; border-radius: .375rem; font-size: .8rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
     </style>
@@ -26,7 +27,8 @@
     <a href="/upload.html">檔案上傳</a>
     <a href="/sync-demo.html">同步 vs 非同步</a>
     <a href="/sse-demo.html">SSE 推送</a>
-    <a href="/login.html">登入</a>
+    <a href="/login.html">JWT 登入</a>
+    <a href="/login-session.html">Session 登入</a>
 </nav>
 <main>
     <h1>登入</h1>

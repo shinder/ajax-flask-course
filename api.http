@@ -136,6 +136,38 @@ GET {{baseUrl}}/api/auth/me
 GET {{baseUrl}}/api/auth/me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwibmFtZSI6ImhhY2tlciJ9.invalid
 
+### ───────── 第 10 章：Session 登入（補充） ─────────
+### REST Client 預設會記住回應的 Cookie 並在後續請求自動帶上
+### （設定 rest-client.rememberCookiesForSubsequentRequests），所以下面的請求不用手動加 Cookie 標頭。
+
+### 登入 → 200，回應標頭有 Set-Cookie: session=...; HttpOnly; Path=/; SameSite=Lax
+### （帳號要先用上面「第 9 章」的註冊請求建立，兩種登入共用 users 資料表）
+POST {{baseUrl}}/api/session/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "secret123"
+}
+
+### 密碼錯誤 → 401
+POST {{baseUrl}}/api/session/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "wrong"
+}
+
+### 查目前登入者 → 200（REST Client 會自動帶上剛才收到的 Cookie）
+GET {{baseUrl}}/api/session/me
+
+### 登出 → 204，回應的 Set-Cookie 會把 Cookie 清掉
+POST {{baseUrl}}/api/session/logout
+
+### 登出後再查 → 401
+GET {{baseUrl}}/api/session/me
+
 ### ───────── 第 6 章：Todos（SQLite，需登入） ─────────
 
 ### 不帶 token → 401
