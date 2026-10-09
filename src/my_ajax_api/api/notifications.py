@@ -43,6 +43,6 @@ def stream_notifications():
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # 若前面有 nginx 之類的反向代理，叫它不要緩衝
+            "X-Accel-Buffering": "no",  # 若前面有 nginx 之類的反向代理，叫它不要緩衝
         },
     )

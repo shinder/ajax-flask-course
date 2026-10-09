@@ -19,17 +19,17 @@ from my_ajax_api.schemas import FruitDto
 bp = Blueprint("fruits", __name__, url_prefix="/api/fruits")
 
 fruits: list[dict] = [
-    {"id": 1,  "name": "蘋果",   "price": 30},
-    {"id": 2,  "name": "香蕉",   "price": 15},
-    {"id": 3,  "name": "芒果",   "price": 50},
-    {"id": 4,  "name": "鳳梨",   "price": 45},
-    {"id": 5,  "name": "西瓜",   "price": 120},
-    {"id": 6,  "name": "葡萄",   "price": 80},
-    {"id": 7,  "name": "草莓",   "price": 150},
-    {"id": 8,  "name": "芭樂",   "price": 25},
-    {"id": 9,  "name": "木瓜",   "price": 35},
-    {"id": 10, "name": "荔枝",   "price": 90},
-    {"id": 11, "name": "柳丁",   "price": 20},
+    {"id": 1, "name": "蘋果", "price": 30},
+    {"id": 2, "name": "香蕉", "price": 15},
+    {"id": 3, "name": "芒果", "price": 50},
+    {"id": 4, "name": "鳳梨", "price": 45},
+    {"id": 5, "name": "西瓜", "price": 120},
+    {"id": 6, "name": "葡萄", "price": 80},
+    {"id": 7, "name": "草莓", "price": 150},
+    {"id": 8, "name": "芭樂", "price": 25},
+    {"id": 9, "name": "木瓜", "price": 35},
+    {"id": 10, "name": "荔枝", "price": 90},
+    {"id": 11, "name": "柳丁", "price": 20},
     {"id": 12, "name": "奇異果", "price": 40},
 ]
 _next_id = 13
@@ -93,7 +93,7 @@ def get_fruits():
     page = min(page, total_pages)
 
     start = (page - 1) * size
-    items = result[start:start + size]
+    items = result[start : start + size]
 
     return {"items": items, "total": total, "page": page, "size": size, "totalPages": total_pages}
 
@@ -106,7 +106,7 @@ def get_fruits():
 def get_fruits_slow():
     seconds = request.args.get("seconds", 10, type=int)
     seconds = min(max(seconds, 1), 30)
-    time.sleep(seconds)   # 開發伺服器是多執行緒的，sleep 只卡住這個請求，不影響其他請求
+    time.sleep(seconds)  # 開發伺服器是多執行緒的，sleep 只卡住這個請求，不影響其他請求
     return {"waitedSeconds": seconds, "items": fruits}
 
 
@@ -121,7 +121,7 @@ def get_fruit(fruit_id: int):
 @bp.post("")
 def create_fruit():
     global _next_id
-    dto = parse_body(FruitDto)        # 驗證失敗會在這裡丟出 400，後面不會執行
+    dto = parse_body(FruitDto)  # 驗證失敗會在這裡丟出 400，後面不會執行
     fruit = {"id": _next_id, "name": dto.name, "price": dto.price}
     _next_id += 1
     fruits.append(fruit)
@@ -159,7 +159,7 @@ def upload_fruit_image():
     note = request.form.get("note", "")
     errors: dict[str, list[str]] = {}
 
-    if file is None or not file.filename:   # 沒有 file 欄位，或有欄位但沒選檔案
+    if file is None or not file.filename:  # 沒有 file 欄位，或有欄位但沒選檔案
         errors["file"] = ["沒有收到檔案"]
         raise ProblemError(400, "輸入資料有誤", errors)
 

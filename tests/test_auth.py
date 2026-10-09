@@ -6,7 +6,7 @@ import jwt
 def test_register_201_then_409(client):
     creds = {"username": "newbie", "password": "secret123"}
     res = client.post("/api/auth/register", json=creds)
-    assert res.status_code in (201, 409)   # 其他測試可能已建過同一個帳號
+    assert res.status_code in (201, 409)  # 其他測試可能已建過同一個帳號
     res = client.post("/api/auth/register", json=creds)
     assert res.status_code == 409
     assert res.json["title"] == "帳號已被使用"
@@ -54,12 +54,20 @@ def test_me_requires_valid_token(client, auth_headers):
 def test_expired_token(client, app, user):
     """自己簽一個已過期的 token，驗證要回「登入已過期」。"""
     from datetime import datetime, timedelta, timezone
+
     cfg = app.config
     past = datetime.now(timezone.utc) - timedelta(minutes=5)
     token = jwt.encode(
-        {"sub": "1", "name": user["username"], "iss": cfg["JWT_ISSUER"],
-         "aud": cfg["JWT_AUDIENCE"], "iat": past - timedelta(minutes=1), "exp": past},
-        cfg["JWT_KEY"], algorithm="HS256",
+        {
+            "sub": "1",
+            "name": user["username"],
+            "iss": cfg["JWT_ISSUER"],
+            "aud": cfg["JWT_AUDIENCE"],
+            "iat": past - timedelta(minutes=1),
+            "exp": past,
+        },
+        cfg["JWT_KEY"],
+        algorithm="HS256",
     )
     res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 401 and res.json["title"] == "登入已過期，請重新登入"
@@ -75,8 +83,12 @@ def test_todos_need_login(client, auth_headers):
     assert todo["isDone"] is False
     assert res.headers["Location"].endswith(f"/api/todos/{todo['id']}")
 
-    assert client.patch(f"/api/todos/{todo['id']}", json={"isDone": True},
-                        headers=auth_headers).status_code == 204
+    assert (
+        client.patch(
+            f"/api/todos/{todo['id']}", json={"isDone": True}, headers=auth_headers
+        ).status_code
+        == 204
+    )
     assert client.get(f"/api/todos/{todo['id']}", headers=auth_headers).json["isDone"] is True
     assert client.delete(f"/api/todos/{todo['id']}", headers=auth_headers).status_code == 204
 

@@ -48,7 +48,8 @@ def test_decode_session_tampered(app, client, user):
     payload, ts, sig = cookie.split(".")
     # 把 user_id 改掉：內容解得開，但簽章對不上
     result = app.test_cli_runner().invoke(
-        args=["decode", "session", f"eyJ1c2VyX2lkIjo5OTl9.{ts}.{sig}"])
+        args=["decode", "session", f"eyJ1c2VyX2lkIjo5OTl9.{ts}.{sig}"]
+    )
     assert result.exit_code == 0
     assert '"user_id": 999' in result.output
     assert "不正確" in result.output

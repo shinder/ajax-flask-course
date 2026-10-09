@@ -28,7 +28,19 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.16.10",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+# ruff 0.16 起會連 Markdown 裡的程式碼區塊一起格式化；docs/ 是講義的連結，不要動
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+# ruff 0.16 大幅擴大了預設規則集（UP、B、SIM…）。教學專案維持舊預設（E4/E7/E9/F）
+# 加 import 排序（I），避免為了通過檢查改寫教材上刻意示範的寫法
+select = ["E4", "E7", "E9", "F", "I"]

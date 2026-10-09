@@ -22,8 +22,8 @@ class CamelModel(BaseModel):
 
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,          # 允許用 Python 欄位名建立（從資料庫列轉換時用）
-        str_strip_whitespace=True,      # 字串自動去頭尾空白
+        populate_by_name=True,  # 允許用 Python 欄位名建立（從資料庫列轉換時用）
+        str_strip_whitespace=True,  # 字串自動去頭尾空白
     )
 
     def to_json(self) -> dict:
@@ -41,11 +41,12 @@ def _require(value: str, message: LiteralString) -> str:
 
 # ── Fruits（第 3 章 In-Memory CRUD） ────────────────────────────────
 
+
 class FruitDto(CamelModel):
     """新增與更新共用同一組欄位與規則；若日後規則分歧，再拆成兩個類別。"""
 
     name: str
-    price: int | float     # JSON 只有一種數字型別；用 int | float 讓 30 維持 30、30.5 維持 30.5
+    price: int | float  # JSON 只有一種數字型別；用 int | float 讓 30 維持 30、30.5 維持 30.5
 
     @field_validator("name")
     @classmethod
@@ -67,10 +68,11 @@ class FruitDto(CamelModel):
 
 # ── Products（第 7 章 SQLite CRUD） ────────────────────────────────
 
+
 class ProductDto(CamelModel):
     name: str
     price: int | float
-    image_url: str | None = None   # 選填；前端送 imageUrl
+    image_url: str | None = None  # 選填；前端送 imageUrl
 
     @field_validator("name")
     @classmethod
@@ -112,6 +114,7 @@ class Product(CamelModel):
 
 # ── Todos（第 6 章 Todo App） ──────────────────────────────────────
 
+
 class CreateTodoDto(CamelModel):
     title: str
 
@@ -130,10 +133,11 @@ class UpdateTodoDto(CamelModel):
 class Todo(CamelModel):
     id: int
     title: str
-    is_done: bool      # SQLite 沒有布林，存 0/1；Pydantic 會自動轉成 True/False
+    is_done: bool  # SQLite 沒有布林，存 0/1；Pydantic 會自動轉成 True/False
 
 
 # ── Auth（第 9 章 JWT） ───────────────────────────────────────────
+
 
 class RegisterDto(CamelModel):
     username: str

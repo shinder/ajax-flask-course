@@ -49,8 +49,8 @@ def create_product():
         # 時間由伺服器決定，不信任用戶端
         (dto.name, dto.price, dto.image_url, utc_now_iso()),
     )
-    db.commit()                       # sqlite3 預設開啟交易，要 commit 才會真的寫入
-    product_id = cursor.lastrowid     # 自動產生的主鍵。型別是 int | None，INSERT 之後一定有值
+    db.commit()  # sqlite3 預設開啟交易，要 commit 才會真的寫入
+    product_id = cursor.lastrowid  # 自動產生的主鍵。型別是 int | None，INSERT 之後一定有值
     assert product_id is not None
     product = _row_to_product(_fetch(product_id))
     return product, 201, {"Location": url_for("products.get_product", product_id=product_id)}
@@ -59,7 +59,7 @@ def create_product():
 # PUT /api/products/5：完整更新（所有欄位都要送，即使沒改）→ 204、404 或 400
 @bp.put("/<int:product_id>")
 def update_product(product_id: int):
-    _fetch(product_id)                # 不存在就 404
+    _fetch(product_id)  # 不存在就 404
     dto = parse_body(ProductDto)
     db = get_db()
     db.execute(

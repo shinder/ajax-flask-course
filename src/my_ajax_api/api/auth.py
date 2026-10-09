@@ -1,7 +1,7 @@
 """JWT 登入流程的三個端點（對應講義 9-6）：
-  POST /api/auth/register  註冊（密碼雜湊後存入 users）
-  POST /api/auth/login     登入（比對密碼，成功就簽發 token）
-  GET  /api/auth/me        需帶 token，回傳目前登入者（用來確認 token 有效）
+POST /api/auth/register  註冊（密碼雜湊後存入 users）
+POST /api/auth/login     登入（比對密碼，成功就簽發 token）
+GET  /api/auth/me        需帶 token，回傳目前登入者（用來確認 token 有效）
 """
 
 import sqlite3
@@ -9,10 +9,10 @@ import sqlite3
 from flask import Blueprint, g
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from my_ajax_api.tokens import create_token, login_required
 from my_ajax_api.db import get_db, utc_now_iso
 from my_ajax_api.errors import ProblemError, parse_body
 from my_ajax_api.schemas import LoginDto, RegisterDto
+from my_ajax_api.tokens import create_token, login_required
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -51,9 +51,13 @@ def register():
 @bp.post("/login")
 def login():
     dto = parse_body(LoginDto)
-    row = get_db().execute(
-        "SELECT id, username, password_hash FROM users WHERE username = ?", (dto.username,)
-    ).fetchone()
+    row = (
+        get_db()
+        .execute(
+            "SELECT id, username, password_hash FROM users WHERE username = ?", (dto.username,)
+        )
+        .fetchone()
+    )
 
     # 帳號不存在與密碼錯誤「一律」回同一句話，
     # 不要讓攻擊者能透過訊息差異判斷哪些帳號存在（帳號列舉攻擊）。

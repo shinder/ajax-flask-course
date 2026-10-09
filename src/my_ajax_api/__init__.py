@@ -41,18 +41,19 @@ def create_app(test_config: dict | None = None) -> Flask:
     # ════════════════════════════════════════════════════════════
     app.config.from_mapping(
         DATABASE=os.path.join(app.instance_path, "app.db"),
-        UPLOAD_DIR=os.path.join(app.root_path, "static", "uploads"),   # 6-1 上傳檔案放 static 底下讓瀏覽器能直接開
-        MAX_CONTENT_LENGTH=2 * 1024 * 1024,    # 整個請求最多 2 MB，超過時 Flask 回 413（6-1 檔案上傳）
-        JWT_ISSUER="FlaskAjaxApi",              # 簽發者，通常填 API 的名稱或網址
-        JWT_AUDIENCE="FlaskAjaxApiClient",      # 接收者，通常填前端的名稱或網址
+        # 6-1 上傳檔案放 static 底下讓瀏覽器能直接開；整個請求最多 2 MB，超過時 Flask 回 413
+        UPLOAD_DIR=os.path.join(app.root_path, "static", "uploads"),
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024,
+        JWT_ISSUER="FlaskAjaxApi",  # 簽發者，通常填 API 的名稱或網址
+        JWT_AUDIENCE="FlaskAjaxApiClient",  # 接收者，通常填前端的名稱或網址
         JWT_EXPIRE_MINUTES=int(os.environ.get("JWT_EXPIRE_MINUTES", "60")),
         JWT_KEY=os.environ.get("JWT_KEY", ""),  # 簽章用的對稱金鑰，放 .env 不進 git
         # Session 登入（第 10 章）：Flask 的 session 是簽章過的 Cookie，SECRET_KEY 就是簽章金鑰。
         # 和 JWT_KEY 分開設，兩種機制各用各的金鑰，其中一把外洩不影響另一邊
         SECRET_KEY=os.environ.get("SECRET_KEY", ""),
-        SESSION_COOKIE_HTTPONLY=True,     # JavaScript 讀不到這個 Cookie（Flask 預設就是 True，寫出來強調）
-        SESSION_COOKIE_SAMESITE="Lax",    # 跨站的 POST 不會帶上 Cookie，擋掉大部分 CSRF（10-4）
-        SESSION_COOKIE_SECURE=False,      # 本機用 http 所以關閉；正式環境走 https 一定要 True
+        SESSION_COOKIE_HTTPONLY=True,  # JavaScript 讀不到這個 Cookie（Flask 預設就是 True，寫出來強調）
+        SESSION_COOKIE_SAMESITE="Lax",  # 跨站的 POST 不會帶上 Cookie，擋掉大部分 CSRF（10-4）
+        SESSION_COOKIE_SECURE=False,  # 本機用 http 所以關閉；正式環境走 https 一定要 True
     )
     if test_config:
         app.config.update(test_config)
@@ -60,8 +61,8 @@ def create_app(test_config: dict | None = None) -> Flask:
     # JSON 輸出設定。app.json 的型別標註是抽象的 JSONProvider，上面沒有這兩個屬性；
     # 明確換成 Flask 內建的 DefaultJSONProvider，型別檢查器才認得
     app.json = DefaultJSONProvider(app)
-    app.json.ensure_ascii = False   # JSON 裡的中文直接輸出，不轉成 \uXXXX
-    app.json.sort_keys = False      # 維持 dict 原本的欄位順序，方便對照（Flask 預設會依字母排序）
+    app.json.ensure_ascii = False  # JSON 裡的中文直接輸出，不轉成 \uXXXX
+    app.json.sort_keys = False  # 維持 dict 原本的欄位順序，方便對照（Flask 預設會依字母排序）
 
     # 金鑰沒設定或太短就在啟動時直接失敗，比執行到登入才出錯好找問題（HMAC-SHA256 至少 32 bytes）
     for key_name in ("JWT_KEY", "SECRET_KEY"):
@@ -83,24 +84,33 @@ def create_app(test_config: dict | None = None) -> Flask:
     # always_send=False：同源請求（沒有 Origin 標頭）就不加 CORS 標頭，DevTools 看起來才乾淨。
     # supports_credentials=True：允許跨來源請求帶 Cookie（第 10 章的 Session 登入從 Live Server 測時需要），
     # 此時 origins 不能用 "*"，瀏覽器會拒絕「萬用字元 + 憑證」的組合（6-4）。
-    CORS(app, always_send=False, supports_credentials=True, resources={r"/api/*": {"origins": [
-        "http://localhost:5500",      # VS Code Live Server
-        "http://127.0.0.1:5500",
-        "http://localhost:3000",      # 其他常見開發 port
-    ]}})
+    CORS(
+        app,
+        always_send=False,
+        supports_credentials=True,
+        resources={
+            r"/api/*": {
+                "origins": [
+                    "http://localhost:5500",  # VS Code Live Server
+                    "http://127.0.0.1:5500",
+                    "http://localhost:3000",  # 其他常見開發 port
+                ]
+            }
+        },
+    )
 
-    db.init_app(app)          # 請求結束關連線、flask init-db 指令、啟動時建表
-    errors.init_app(app)      # 400/401/404/500 統一回 JSON（8-3）
-    decode.init_app(app)      # flask decode jwt / session：解開 token 與 Cookie 的終端機工具（9-8、10-1）
+    db.init_app(app)  # 請求結束關連線、flask init-db 指令、啟動時建表
+    errors.init_app(app)  # 400/401/404/500 統一回 JSON（8-3）
+    decode.init_app(app)  # flask decode jwt / session：解開 token 與 Cookie（9-8、10-1）
 
     # 每個 api/*.py 定義一個 Blueprint（變數名統一叫 bp），這裡一行掛一組路由（3-5）
-    app.register_blueprint(basics.bp)          # GET  /api/basics                 3-1
-    app.register_blueprint(fruits.bp)          # CRUD /api/fruits（In-Memory）      3-4、5-8、4-3、6-1
-    app.register_blueprint(todos.bp)           # CRUD /api/todos（SQLite，需登入）   6-6、7-4、9-5
-    app.register_blueprint(products.bp)        # CRUD /api/products（SQLite）        7-4
-    app.register_blueprint(notifications.bp)   # SSE  /api/notifications/stream    6-2
-    app.register_blueprint(auth.bp)            # JWT  /api/auth/*                  9-6
-    app.register_blueprint(session_auth.bp)    # Session /api/session/*            10-2（補充）
+    app.register_blueprint(basics.bp)  # GET  /api/basics                 3-1
+    app.register_blueprint(fruits.bp)  # CRUD /api/fruits（In-Memory）      3-4、5-8、4-3、6-1
+    app.register_blueprint(todos.bp)  # CRUD /api/todos（SQLite，需登入）   6-6、7-4、9-5
+    app.register_blueprint(products.bp)  # CRUD /api/products（SQLite）        7-4
+    app.register_blueprint(notifications.bp)  # SSE  /api/notifications/stream    6-2
+    app.register_blueprint(auth.bp)  # JWT  /api/auth/*                  9-6
+    app.register_blueprint(session_auth.bp)  # Session /api/session/*            10-2（補充）
 
     # 根路徑導向首頁：/ → static/index.html
     @app.get("/")

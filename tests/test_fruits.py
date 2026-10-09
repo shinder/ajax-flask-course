@@ -74,10 +74,7 @@ def test_create_without_json_body(client):
 
 
 def test_update_and_delete(client):
-    assert (
-        client.put("/api/fruits/1", json={"name": "紅蘋果", "price": 35}).status_code
-        == 204
-    )
+    assert client.put("/api/fruits/1", json={"name": "紅蘋果", "price": 35}).status_code == 204
     assert client.get("/api/fruits/1").json["name"] == "紅蘋果"
     assert client.delete("/api/fruits/1").status_code == 204
     assert client.get("/api/fruits/1").status_code == 404
@@ -95,9 +92,7 @@ def test_upload_png(client, app):
         "file": (BytesIO(b"\x89PNG fake"), "photo.PNG", "image/png"),
         "note": "測試",
     }
-    res = client.post(
-        "/api/fruits/upload", data=data, content_type="multipart/form-data"
-    )
+    res = client.post("/api/fruits/upload", data=data, content_type="multipart/form-data")
     assert res.status_code == 200
     assert res.json["url"].startswith("/uploads/") and res.json["url"].endswith(".png")
     assert res.json["note"] == "測試"

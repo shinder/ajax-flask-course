@@ -28,7 +28,7 @@ def test_image_url_conditional_validation(client):
 
     res = client.post("/api/products", json={"name": "X", "price": 1, "imageUrl": "http://a/b.png"})
     assert res.status_code == 400
-    assert res.json["errors"]["imageUrl"] == ["圖片 URL 必須使用 https"]   # key 用 camelCase
+    assert res.json["errors"]["imageUrl"] == ["圖片 URL 必須使用 https"]  # key 用 camelCase
 
 
 def test_update_delete_404(client):

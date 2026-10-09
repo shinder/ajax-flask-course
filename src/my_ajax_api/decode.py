@@ -117,7 +117,9 @@ def decode_session(cookie: str):
 
     click.echo(click.style("Payload", bold=True) + ("（zlib 壓縮過）" if compressed else ""))
     click.echo(_pretty(payload))
-    click.echo(click.style("Timestamp", bold=True) + f"  {_fmt_time(timestamp)}（簽發時間，本地時區）")
+    click.echo(
+        click.style("Timestamp", bold=True) + f"  {_fmt_time(timestamp)}（簽發時間，本地時區）"
+    )
 
     # 簽章交給 Flask 自己的 serializer 驗（itsdangerous 的 URLSafeTimedSerializer，
     # 金鑰是 SECRET_KEY 加上 salt "cookie-session"，HMAC-SHA1），和它讀取請求時做的事相同

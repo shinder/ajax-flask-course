@@ -282,6 +282,15 @@ uv run pytest tests/test_session.py   # 只跑一個檔案
 - `create_app(test_config)` 接受測試用的設定：金鑰、資料庫路徑、上傳目錄都直接傳進去，不碰 `.env`，CI 沒有 `.env` 也能跑。這就是工廠函式比模組層級的 `app` 好測的地方。
 - 資料庫與上傳目錄指到 pytest 的暫存資料夾，不會碰到開發用的 `instance/app.db` 與 `static/uploads/`。水果存在模組層級的 list，每個測試前後自動還原。
 
+## 程式碼排版與檢查：Ruff
+
+```bash
+uv run ruff format .   # 排版
+uv run ruff check .    # 檢查；加 --fix 自動修正能修的，例如 import 順序
+```
+
+規則設定在 `pyproject.toml` 的 `[tool.ruff]`：行寬 100，lint 只開語法錯誤、未使用的變數與 import、import 排序，不開 ruff 0.16 擴大後的其他規則，以免被要求改寫教材刻意示範的寫法。VS Code 的 Ruff 擴充套件會讀同一份設定，存檔時自動排版。
+
 ---
 
 ## 從零建立專案的指令流程

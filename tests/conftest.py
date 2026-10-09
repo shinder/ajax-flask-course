@@ -18,15 +18,17 @@ from my_ajax_api.api import fruits as fruits_module
 def app(tmp_path_factory):
     """整個測試過程共用一個 app，資料庫與上傳目錄指到暫存資料夾。"""
     tmp = tmp_path_factory.mktemp("data")
-    return create_app({
-        "TESTING": True,
-        "DATABASE": str(tmp / "test.db"),
-        "UPLOAD_DIR": str(tmp / "uploads"),
-        # 固定的測試金鑰，和 .env 無關，CI 環境沒有 .env 也能跑
-        "JWT_KEY": "test-jwt-key-" + "x" * 32,
-        "SECRET_KEY": "test-secret-key-" + "y" * 32,
-        "JWT_EXPIRE_MINUTES": 60,
-    })
+    return create_app(
+        {
+            "TESTING": True,
+            "DATABASE": str(tmp / "test.db"),
+            "UPLOAD_DIR": str(tmp / "uploads"),
+            # 固定的測試金鑰，和 .env 無關，CI 環境沒有 .env 也能跑
+            "JWT_KEY": "test-jwt-key-" + "x" * 32,
+            "SECRET_KEY": "test-secret-key-" + "y" * 32,
+            "JWT_EXPIRE_MINUTES": 60,
+        }
+    )
 
 
 @pytest.fixture

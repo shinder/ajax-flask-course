@@ -48,10 +48,10 @@ def _decode_token(token: str) -> dict:
     return jwt.decode(
         token,
         cfg["JWT_KEY"],
-        algorithms=["HS256"],          # 明確指定，避免「alg: none」之類的攻擊
+        algorithms=["HS256"],  # 明確指定，避免「alg: none」之類的攻擊
         issuer=cfg["JWT_ISSUER"],
         audience=cfg["JWT_AUDIENCE"],
-        leeway=0,                      # 不容許時鐘誤差，讓到期時間精準（前後端在同一台機器）
+        leeway=0,  # 不容許時鐘誤差，讓到期時間精準（前後端在同一台機器）
     )
 
 

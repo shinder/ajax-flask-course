@@ -6,10 +6,10 @@
 
 from flask import Blueprint, abort, url_for
 
-from my_ajax_api.tokens import login_required
 from my_ajax_api.db import get_db
 from my_ajax_api.errors import parse_body
 from my_ajax_api.schemas import CreateTodoDto, Todo, UpdateTodoDto
+from my_ajax_api.tokens import login_required
 
 bp = Blueprint("todos", __name__, url_prefix="/api/todos")
 
@@ -46,9 +46,11 @@ def get_todo(todo_id: int):
 def create_todo():
     dto = parse_body(CreateTodoDto)
     db = get_db()
-    cursor = db.execute("INSERT INTO todos (title) VALUES (?)", (dto.title,))   # is_done 用資料表預設值 0
+    cursor = db.execute(
+        "INSERT INTO todos (title) VALUES (?)", (dto.title,)
+    )  # is_done 用資料表預設值 0
     db.commit()
-    new_id = cursor.lastrowid         # 型別是 int | None，INSERT 之後一定有值
+    new_id = cursor.lastrowid  # 型別是 int | None，INSERT 之後一定有值
     assert new_id is not None
     todo = _row_to_todo(_fetch(new_id))
     return todo, 201, {"Location": url_for("todos.get_todo", todo_id=todo["id"])}

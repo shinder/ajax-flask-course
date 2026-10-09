@@ -87,8 +87,11 @@ def parse_body[T: BaseModel](model: type[T]) -> T:
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        raise ProblemError(400, "請求本文必須是 JSON 物件",
-                           {"": ["Content-Type 要是 application/json，且本文是合法的 JSON 物件"]})
+        raise ProblemError(
+            400,
+            "請求本文必須是 JSON 物件",
+            {"": ["Content-Type 要是 application/json，且本文是合法的 JSON 物件"]},
+        )
     try:
         return model.model_validate(data)
     except ValidationError as exc:

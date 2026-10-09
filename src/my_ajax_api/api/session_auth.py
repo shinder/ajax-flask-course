@@ -48,9 +48,13 @@ def session_required(view):
 @bp.post("/login")
 def login():
     dto = parse_body(LoginDto)
-    row = get_db().execute(
-        "SELECT id, username, password_hash FROM users WHERE username = ?", (dto.username,)
-    ).fetchone()
+    row = (
+        get_db()
+        .execute(
+            "SELECT id, username, password_hash FROM users WHERE username = ?", (dto.username,)
+        )
+        .fetchone()
+    )
 
     # 和 JWT 版一樣：帳號不存在與密碼錯誤回同一句話，避免帳號列舉
     if row is None or not check_password_hash(row["password_hash"], dto.password):
