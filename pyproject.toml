@@ -22,7 +22,7 @@ my-ajax-api = "my_ajax_api:main"
 [build-system]
 # 有這一段，uv sync 會把 src/my_ajax_api 以可編輯模式裝進 .venv，
 # 之後不管從哪個目錄執行、測試放在哪裡，import my_ajax_api 都找得到
-requires = ["uv_build>=0.12.23,<0.13.0"]
+requires = ["uv_build>=0.12.23,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
