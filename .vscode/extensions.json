@@ -3,6 +3,7 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
+    "tamasfe.even-better-toml",
     "humao.rest-client",
     "ritwickdey.liveserver",
     "42crunch.vscode-openapi",
