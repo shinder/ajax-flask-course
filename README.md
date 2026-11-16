@@ -68,6 +68,8 @@ uv run flask run
 
 兩個伺服器在 `pyproject.toml` 裡用 PEP 508 環境標記依作業系統擇一安裝：`gunicorn; sys_platform != 'win32'`、`waitress; sys_platform == 'win32'`。`uv.lock` 是跨平台的，同一份 lock 在 macOS、Linux、Windows 上 `uv sync` 都會裝到對的那一個。
 
+> 兩支腳本都綁定 `0.0.0.0`，讓同一區網的手機或其他電腦也能連進來。啟動訊息印的 `http://0.0.0.0:8000` 只是綁定位址，不是給瀏覽器開的網址：本機請開 `http://127.0.0.1:8000`，其他裝置用這台電腦的區網 IP。macOS 與 Linux 會寬鬆地把 0.0.0.0 導到本機所以看似能開，Windows 會直接連不上。
+
 Windows PowerShell 預設執行原則是 `Restricted`，直接執行 `.\start.ps1` 會出現「因為這個系統上已停用指令碼執行」的錯誤。擇一處理：
 
 ```powershell
