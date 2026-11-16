@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 rem 啟動正式環境伺服器（Windows cmd 或 PowerShell 皆可執行）
 rem gunicorn 依賴 Unix 專屬的 fcntl 模組，Windows 原生跑不起來，所以這裡改用 waitress，
 rem 它是純 Python 的 WSGI 伺服器，功能定位和 gunicorn 相同。想用 gunicorn 請在 WSL 裡執行 ./prod.sh。
