@@ -3,6 +3,7 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
+    "samuelcolvin.jinjahtml",
     "tamasfe.even-better-toml",
     "humao.rest-client",
     "ritwickdey.liveserver",
