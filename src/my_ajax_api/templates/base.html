@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+{#
+    /pages 底下所有頁面共用的版型：head、導覽列與 main 外框只寫在這裡。
+    各頁用 {% extends "base.html" %} 繼承，再填下面四個 block：
+        title    分頁標題（後面會自動接上「 — Flask AJAX API」）
+        style    該頁專用的 style 區塊
+        content  main 裡的內容
+        scripts  該頁的 script 區塊
+    這一段用的是 Jinja 註解，和 HTML 註解不同，不會出現在送給瀏覽器的 HTML 裡。
+    註解裡的標籤名稱刻意不加角括號：編輯器把這個檔案當成一般 HTML 解析，不認得 Jinja 註解，
+    寫出完整的 style 標籤會讓它以為樣式區塊從這裡開始。
+#}
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}{% endblock %} — Flask AJAX API</title>
+    {# url_for('static', ...) 產生靜態檔的網址；create_app() 設了 static_url_path=""，所以結果是 /css/style.css #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        nav a[aria-current="page"] { color: #fff; font-weight: 600; }   /* 目前所在的頁面 */
+    </style>
+{% block style %}{% endblock %}
+</head>
+<body>
+{#
+    導覽列只維護這一份。每一項是（端點名稱, 顯示文字），端點名稱是「藍圖名.函式名」（見 pages.py）。
+    request.endpoint 是目前這個請求對到的端點，相同就標成目前頁面。
+    {%- 的減號會吃掉標籤前面的空白與換行，輸出的 HTML 才不會每個連結之間多一行空行。
+#}
+{% set nav_items = [
+    ("pages.index", "待辦清單"),
+    ("pages.fruits", "水果清單"),
+    ("pages.products", "商品管理"),
+    ("pages.upload", "檔案上傳"),
+    ("pages.sync_demo", "同步 vs 非同步"),
+    ("pages.sse_demo", "SSE 推送"),
+    ("pages.login", "JWT 登入"),
+    ("pages.login_session", "Session 登入"),
+] %}
+<nav>
+{%- for endpoint, label in nav_items %}
+    <a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ label }}</a>
+{%- endfor %}
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

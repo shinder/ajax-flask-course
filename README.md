@@ -106,6 +106,32 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ---
 
+## Jinja 模板版的頁面（/pages）
+
+上表有導覽列的 8 個頁面另外有一份用 Jinja 模板產生的版本，放在 `/pages` 底下，功能與靜態版相同，兩種版本並存。這一組頁面只有 Flask 版有，.NET 版沒有對應的內容。
+
+| 頁面 | 靜態版 | Jinja 模板版 |
+| ---- | ------ | ------------ |
+| 待辦清單 | <http://localhost:8000/> | <http://localhost:8000/pages/> |
+| 水果清單 | `/fruits.html` | <http://localhost:8000/pages/fruits> |
+| 商品管理 | `/products.html` | <http://localhost:8000/pages/products> |
+| 檔案上傳 | `/upload.html` | <http://localhost:8000/pages/upload> |
+| 同步 vs 非同步 | `/sync-demo.html` | <http://localhost:8000/pages/sync-demo> |
+| SSE 推送 | `/sse-demo.html` | <http://localhost:8000/pages/sse-demo> |
+| JWT 登入 | `/login.html` | <http://localhost:8000/pages/login> |
+| Session 登入 | `/login-session.html` | <http://localhost:8000/pages/login-session> |
+
+兩種版本的差別在 HTML 是怎麼來的：
+
+- 靜態版：`static/*.html` 原封不動送給瀏覽器，每一頁都自己帶一份 `<head>` 與導覽列，改導覽列要改 8 個檔案。
+- Jinja 模板版：`pages.py` 的路由呼叫 `render_template()`，伺服器在回應前把共用版型 `templates/base.html` 與各頁的內容組起來。導覽列只寫一份，連結用 `url_for()` 產生，並用 `request.endpoint` 標出目前所在的頁面。
+
+頁面上的資料仍然是瀏覽器載入後用 AJAX 向 `/api/*` 取得，模板只負責組出 HTML 骨架，所以各頁的 `<script>` 與靜態版相同。唯一的例外是 Session 登入頁：模板版只能從後端自己的網址開，一定是同源，所以拿掉了跨來源用的 `BASE_URL` 與 `credentials: 'include'`；要用 Live Server 觀察跨來源帶 Cookie，請開靜態版。
+
+> 各頁的 `<script>` 在 `static/` 與 `templates/` 各有一份，修改頁面功能時兩邊都要改。
+
+---
+
 ## JWT 登入
 
 ### 流程
@@ -204,6 +230,10 @@ ajax-flask-course/
 │   ├── errors.py           # Problem Details 格式、parse_body()、400/401/404/500 統一處理（8-3）
 │   ├── tokens.py           # JWT 簽發（create_token）與驗證（login_required 裝飾器）（9-4、9-5）
 │   ├── decode.py           # flask decode jwt / session：解開 token 與 Cookie 並驗簽章（9-8、10-1）
+│   ├── pages.py            # Jinja 模板版的頁面 /pages/*：每個路由一行 render_template()
+│   ├── templates/          # Jinja 模板（Flask 預設的 templates 位置）
+│   │   ├── base.html       # 共用版型：<head>、導覽列、<main> 外框
+│   │   └── index.html … login-session.html   # 8 個頁面，繼承 base.html，內容與 static/ 的同名檔相同
 │   ├── api/                # 每種資源一個檔案，各自定義一個 Blueprint（bp）
 │   │   ├── basics.py       # GET /api/basics，最簡單的端點（3-1）
 │   │   ├── fruits.py       # In-Memory CRUD /api/fruits，含搜尋/排序/分頁、slow、upload（3-4、5-8、4-3、6-1）
@@ -273,7 +303,7 @@ uv run flask decode session eyJ1c2VyX2lk...    # 內容、簽發時間、用 SEC
 ## 自動化測試
 
 ```bash
-uv run pytest          # 42 個測試，約一秒
+uv run pytest          # 54 個測試，約一秒
 uv run pytest -v       # 列出每個測試的名稱
 uv run pytest tests/test_session.py   # 只跑一個檔案
 ```
@@ -288,6 +318,7 @@ uv run pytest tests/test_session.py   # 只跑一個檔案
 | `tests/test_auth.py` | 註冊 409、登入 401 同訊息、竄改與過期的 token、todos 需登入 |
 | `tests/test_session.py` | `Set-Cookie` 屬性、登出清 Cookie、竄改 Cookie、CORS 憑證標頭 |
 | `tests/test_decode.py` | `flask decode` 指令：正確與竄改的 token 與 Cookie、壓縮過的 Cookie |
+| `tests/test_pages.py` | Jinja 模板版的頁面：版型有套上、導覽列連結與目前頁面的標示、`/pages` 轉址 |
 
 兩個設計上的細節：
 

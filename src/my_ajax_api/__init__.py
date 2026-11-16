@@ -20,7 +20,7 @@ from flask import Flask
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 
-from my_ajax_api import db, decode, errors
+from my_ajax_api import db, decode, errors, pages
 from my_ajax_api.api import auth, basics, fruits, notifications, products, session_auth, todos
 
 # 這個檔案在 src/my_ajax_api/ 底下，往上兩層就是專案根目錄（有 pyproject.toml 的那層）
@@ -111,6 +111,11 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.register_blueprint(notifications.bp)  # SSE  /api/notifications/stream    6-2
     app.register_blueprint(auth.bp)  # JWT  /api/auth/*                  9-6
     app.register_blueprint(session_auth.bp)  # Session /api/session/*            10-2（補充）
+
+    # Jinja 模板版的頁面：/pages/*，功能與 static/ 的同名頁面相同，共用版型在 templates/base.html。
+    # 靜態檔的規則是 /<path:filename>，也對得上 /pages/fruits；Werkzeug 會優先比對固定文字較多的規則，
+    # 所以這組路由不會被靜態檔搶走
+    app.register_blueprint(pages.bp)
 
     # 根路徑導向首頁：/ → static/index.html
     @app.get("/")
