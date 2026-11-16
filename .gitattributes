@@ -1,0 +1,4 @@
+# 批次檔固定用 CRLF。cmd.exe 以位元組位置逐行讀批次檔，檔案是 LF 換行又含中文註解時，
+# 位置會算錯而從一行中間重新讀起，出現「'-env-file' 不是內部或外部命令」這類錯誤。
+*.bat text eol=crlf
+*.cmd text eol=crlf
