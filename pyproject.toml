@@ -13,6 +13,11 @@ dependencies = [
     "pydantic>=2.13.5",
     "pyjwt>=2.15.1",
     "python-dotenv>=1.2.4",
+    # 正式環境伺服器依作業系統擇一安裝（分號後面是 PEP 508 環境標記）：
+    # gunicorn 靠 fork 與 Unix 訊號運作，Windows 跑不起來，所以 Windows 改裝純 Python 的 waitress。
+    # uv.lock 是跨平台的，一份 lock 兩邊都能用；prod.sh / prod.bat 各自呼叫對應的伺服器
+    "gunicorn>=27.0.1; sys_platform != 'win32'",
+    "waitress>=3.0.2; sys_platform == 'win32'",
 ]
 
 [project.scripts]

@@ -59,6 +59,15 @@ uv run flask run
 | `start.bat` | `.\start.bat`（cmd 或 PowerShell 皆可） | 不受 PowerShell 執行原則限制，最省事 |
 | `start.ps1` | `.\start.ps1` | 需先放行執行原則，見下方 |
 
+想體驗正式環境的啟動方式（沒有 debug、不會自動重載），另有兩支腳本。它們不像 `flask run` 會自動讀 `.env`，所以透過 `uv run --env-file .env` 先載入金鑰：
+
+| 腳本 | 執行方式 | 說明 |
+| ---- | -------- | ---- |
+| `prod.sh` | `./prod.sh` | macOS / Linux，用 gunicorn 開 4 個 worker |
+| `prod.bat` | `.\prod.bat` | Windows。gunicorn 靠 fork 與 Unix 訊號運作，Windows 跑不起來，改用 waitress（純 Python 的 WSGI 伺服器） |
+
+兩個伺服器在 `pyproject.toml` 裡用 PEP 508 環境標記依作業系統擇一安裝：`gunicorn; sys_platform != 'win32'`、`waitress; sys_platform == 'win32'`。`uv.lock` 是跨平台的，同一份 lock 在 macOS、Linux、Windows 上 `uv sync` 都會裝到對的那一個。
+
 Windows PowerShell 預設執行原則是 `Restricted`，直接執行 `.\start.ps1` 會出現「因為這個系統上已停用指令碼執行」的錯誤。擇一處理：
 
 ```powershell
@@ -138,7 +147,7 @@ sqlite3 instance/app.db "select username, password_hash from users;"
 
 ### 常見問題
 
-- 啟動時報「JWT_KEY 未設定或太短」：`.env` 沒建或沒填，見上方「設定 JWT 簽章金鑰」。
+- 啟動時報「JWT_KEY 未設定或太短」：`.env` 沒建或沒填，見上方「設定 JWT 簽章金鑰」。若是直接下 `uv run gunicorn ...` 才出錯，是因為 gunicorn 不會自動讀 `.env`，改用 `./prod.sh` 或在指令加上 `--env-file .env`。
 - 改了 `schema.sql` 但資料表沒變：`CREATE TABLE IF NOT EXISTS` 不會修改已存在的資料表，執行 `uv run flask init-db` 重建（資料會清空）。
 - 上傳檔案後頁面沒有自動重新整理：這是正常的，Flask 的自動重啟只監看 Python 檔，不監看 `static/`。
 
@@ -224,7 +233,8 @@ ajax-flask-course/
 ├── api.http                # 所有端點的測試請求（REST Client）
 ├── .flaskenv               # flask run 的設定：FLASK_APP=my_ajax_api、port 8000、debug（可進 git）
 ├── .env.example            # 機密設定的範本，複製成 .env 後填 JWT_KEY 與 SECRET_KEY（.env 不進 git）
-├── start.sh / start.bat / start.ps1   # 啟動腳本
+├── start.sh / start.bat / start.ps1   # 啟動腳本（開發伺服器）
+├── prod.sh / prod.bat      # 正式環境啟動腳本：gunicorn（macOS / Linux）、waitress（Windows）
 └── README.md
 ```
 
