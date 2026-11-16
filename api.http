@@ -1,5 +1,6 @@
 # 用 VS Code 的 REST Client 擴充套件開啟，每個請求上方會出現 Send Request，點擊即可送出（講義 1-6）。
 # 請求之間用 ### 分隔。先啟動伺服器：uv run flask run（或 ./start.sh、.\start.bat）。
+# 想改用 curl：在請求內容按右鍵選「Copy Request As cURL」（或命令面板輸入 Rest Client: Copy Request As cURL），再貼到終端機執行。
 
 @baseUrl = http://localhost:8000
 
